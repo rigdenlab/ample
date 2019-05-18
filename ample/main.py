@@ -313,7 +313,7 @@ class Ample(object):
             optd['psipred_ss2'] = rosetta_modeller.psipred_ss2
 
         con_util = self.handle_contacts(optd)
-        if optd['make_models'] and optd['restraints_file']:
+        if optd['restraints_file']:
             rosetta_modeller.restraints_file = optd['restraints_file']
 
         if optd['make_models']:

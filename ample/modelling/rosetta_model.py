@@ -338,6 +338,8 @@ class RosettaModel(object):
         elif self.multimer_modelling == multimer_definitions.TETRAMER:
             symfile_name = 'symdef_tetramer.dat'
             symdef = multimer_definitions.SYMFILE_TETRAMER
+        else:
+            raise RuntimeError("Unrecognised multimer_modelling mode: {}".format(self.multimer_modelling ))
             
         symfile_path = os.path.join(self.work_dir, symfile_name)
         with open(symfile_path, 'w') as w:
@@ -938,7 +940,7 @@ class RosettaModel(object):
         self.mnr_remodel_fasta = optd['nmr_remodel_fasta']
         
         # Multimer modelling
-        self.multimer_modelling = optd['multimeric_modelling']
+        self.multimer_modelling = optd['multimer_modelling']
         self.nchains = optd['nmasu']
         
         # Runtime options

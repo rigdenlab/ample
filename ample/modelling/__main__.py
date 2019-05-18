@@ -10,13 +10,13 @@ import logging
 import multiprocessing
 
 from ample.util import argparse_util
+from ample.util.sequence_util import Sequence
 from ample.util import logging_util
 from ample.modelling.rosetta_model import RosettaModel
 
 def process_args(args):
-    if args.rosetta_flagsfile is None:
-        raise RuntimeError("Need to supply a ROSETTA flagsfile with the -rosetta_flagsfile argument")
-    args.rosetta_flagsfile = os.path.abspath(args.rosetta_flagsfile)
+    if args.rosetta_flagsfile:
+        args.rosetta_flagsfile = os.path.abspath(args.rosetta_flagsfile)
     if args.nproc is None:
         if args.submit_cluster:
             args.nproc = 1
@@ -26,6 +26,8 @@ def process_args(args):
 
 # Handle the command-line
 parser = argparse.ArgumentParser(description="AMPLE Modelling Module")
+# Need to add seperately here as is usually part of MR options
+parser.add_argument('-fasta', help='protein fasta file.')
 argparse_util.add_core_options(parser)
 argparse_util.add_rosetta_options(parser)
 argparse_util.add_cluster_submit_options(parser)
@@ -48,16 +50,20 @@ logger.info("*** AMPLE ROSETTA modelling package ***")
 
 if not os.path.isdir(args.work_dir):
     os.mkdir(args.work_dir)
-
+    
 rm = RosettaModel()
 if args.rosetta_dir and os.path.isdir(args.rosetta_dir):
     rm.set_paths(rosetta_dir=args.rosetta_dir)
 
+if args.fasta:
+    fp = Sequence(fasta=args.fasta, canonicalise=False)
+    rm.sequence_length = fp.length()
+
 rm.nmodels = args.nmodels
 rm.work_dir = args.work_dir
 rm.models_dir = args.models_dir
+rm.multimer_modelling = args.multimer_modelling
 
-rm.nproc = args.nproc
 rm.submit_cluster = args.submit_cluster
 rm.submit_qtype = args.submit_qtype
 rm.submit_queue = args.submit_queue
@@ -65,4 +71,7 @@ rm.submit_array = args.submit_array
 rm.submit_max_array = args.submit_max_array
 
 logger.info("Running binary {} with flagsfile: {}".format(args.rosetta_executable, args.rosetta_flagsfile))
-rm.model_from_flagsfile(args.rosetta_flagsfile, args.rosetta_executable)
+if args.multimer_modelling:
+    rm.do_multimer_modelling()
+else:
+    rm.model_from_flagsfile(args.rosetta_flagsfile, args.rosetta_executable)

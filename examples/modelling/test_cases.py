@@ -56,19 +56,18 @@ TEST_DICT[test_name] = {'args' : args_default,
 
 
 # Specify the arguments to the ensembler module to run this test case
-test_name = 'multimer_modelling'
+test_name = 'modelling_multimer'
 args_multimer =  [
     [ '-rosetta_dir', '/opt/rosetta-3.5' ],
     [ '-fasta', os.path.join(SHARE_DIR, 'examples', 'toxd-example', 'input', 'toxd_.fasta')],
-    [ '-mtz', os.path.join(SHARE_DIR, 'examples', 'toxd-example', 'input', 'toxd.mtz')],
     [ '-frags_3mers', os.path.join(SHARE_DIR, 'examples', 'toxd-example', 'input', 'aat000_03_05.200_v1_3')],
     [ '-frags_9mers', os.path.join(SHARE_DIR, 'examples', 'toxd-example', 'input', 'aat000_09_05.200_v1_3')],
-    [ '-multimeric_modelling', 'dimer'],
+    [ '-multimer_modelling', 'dimer'],
     [ '-nmodels', '2' ]
 ]
 
 class AMPLETest(TestCase):
-    def test_multimer_modelling(self):
+    def test_modelling_multimer(self):
         models_dir = os.path.join(os.getcwd(), test_name, "models")
         models = glob.glob(os.path.join(models_dir, "*.pdb"))
         self.assertEqual(len(models), 2)
