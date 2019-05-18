@@ -222,7 +222,6 @@ class Ample(object):
                     structure_file = None
                 optd['contact_map'], optd['contact_ppv'] = con_util.summarize(plot_file, structure_file, 'pdb',
                                                                               optd['native_cutoff'])
-    
                 restraints_file = os.path.join(optd['contacts_dir'], optd['name'] + ".cst")
                 optd['restraints_file'] = con_util.write_restraints(restraints_file, optd['restraints_format'],
                                                                     optd['energy_function'])
@@ -230,6 +229,7 @@ class Ample(object):
                 con_util = None
         else:
             con_util = None
+        return con_util
         
     def modelling_required(self, optd):
         return (optd['make_frags'] or optd['make_models'] or optd['nmr_remodel'])
@@ -328,7 +328,7 @@ class Ample(object):
 
         # Sub-select the decoys using contact information
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
-            logger.info('Subselecting models from directory using ' 'provided contact information')
+            logger.info('Subselecting models from directory using provided contact information')
             subselect_data = con_util.subselect_decoys(optd['processed_models'], 'pdb', mode=optd['subselect_mode'], **optd)
             optd['processed_models'] = zip(*subselect_data)[0]
             optd['subselect_data'] = dict(subselect_data)
