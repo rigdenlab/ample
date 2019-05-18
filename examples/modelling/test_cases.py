@@ -61,14 +61,14 @@ args_multimer =  [
     [ '-frags_3mers', os.path.join(SHARE_DIR, 'examples', 'toxd-example', 'input', 'aat000_03_05.200_v1_3')],
     [ '-frags_9mers', os.path.join(SHARE_DIR, 'examples', 'toxd-example', 'input', 'aat000_09_05.200_v1_3')],
     [ '-multimer_modelling', 'dimer'],
-    [ '-nmodels', '2' ]
+    [ '-nmodels', '1' ]
 ]
 
 class AMPLETest(TestCase):
     def test_modelling_multimer(self):
         models_dir = os.path.join(os.getcwd(), test_name, "models")
         models = glob.glob(os.path.join(models_dir, "*.pdb"))
-        self.assertEqual(len(models), 2)
+        self.assertEqual(len(models), 1)
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
