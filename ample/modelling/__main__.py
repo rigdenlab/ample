@@ -37,8 +37,7 @@ parser.set_defaults(submit_cluster = False,
                     submit_qtype = 'SGE',
                     submit_array = True,
                     nmodels = 1000,
-                    work_dir = work_dir,
-                    models_dir = os.path.join(work_dir, "models"))
+                    work_dir = work_dir)
 args = parser.parse_args()
 process_args(args)
 
@@ -61,9 +60,10 @@ if args.fasta:
 
 rm.nmodels = args.nmodels
 rm.work_dir = args.work_dir
-rm.models_dir = args.models_dir
+rm.models_dir = os.path.join(args.work_dir, "models")
 rm.multimer_modelling = args.multimer_modelling
 
+rm.nproc = args.nproc
 rm.submit_cluster = args.submit_cluster
 rm.submit_qtype = args.submit_qtype
 rm.submit_queue = args.submit_queue
