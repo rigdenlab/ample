@@ -55,12 +55,15 @@ if args.rosetta_dir and os.path.isdir(args.rosetta_dir):
     rm.set_paths(rosetta_dir=args.rosetta_dir)
 
 if args.fasta:
+    rm.fasta = args.fasta
     fp = Sequence(fasta=args.fasta, canonicalise=False)
     rm.sequence_length = fp.length()
 
 rm.nmodels = args.nmodels
 rm.work_dir = args.work_dir
 rm.models_dir = os.path.join(args.work_dir, "models")
+rm.frags_3mers = args.frags_3mers
+rm.frags_9mers = args.frags_9mers
 rm.multimer_modelling = args.multimer_modelling
 
 rm.nproc = args.nproc
