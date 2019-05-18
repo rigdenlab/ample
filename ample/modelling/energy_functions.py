@@ -264,7 +264,7 @@ class RosettaFunctionConstructs(object):
     def FLAT_HARMONIC(self):
         """ROSETTA FLAT HARMONIC energy function"""
         construct = RosettaFunctionConstructs._ATOMPAIR \
-                     + "FLAT HARMONIC {x0: >.2f} {stddev: >.2f} {tol: >.2f}"
+                     + "FLAT_HARMONIC {x0: >.2f} {stddev: >.2f} {tol: >.2f}"
         return construct
 
     @property
