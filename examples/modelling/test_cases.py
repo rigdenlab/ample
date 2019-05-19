@@ -33,7 +33,7 @@ args_default =  [
     [ '-nmodels', '3' ]
 ]
 
-class AMPLETest(TestCase):
+class AMPLETest1(TestCase):
     def test_modelling_default(self):
         models_dir = os.path.join(os.getcwd(), test_name, "models")
         nmodels = len(glob.glob(os.path.join(models_dir, "*.pdb")))
@@ -48,7 +48,7 @@ def copy_files(run_dir):
 
 # Add everything to the test_dict - the key is used to name the script and run directory
 TEST_DICT[test_name] = {'args' : args_default,
-                        'test' :  AMPLETest,
+                        'test' :  AMPLETest1,
                         'setup' :  copy_files
                        }
 #
@@ -64,7 +64,7 @@ args_multimer =  [
     [ '-nmodels', '1' ]
 ]
 
-class AMPLETest(TestCase):
+class AMPLETest2(TestCase):
     def test_modelling_multimer(self):
         models_dir = os.path.join(os.getcwd(), test_name, "models")
         models = glob.glob(os.path.join(models_dir, "*.pdb"))
@@ -73,7 +73,7 @@ class AMPLETest(TestCase):
 
 # Add everything to the test_dict - the key is used to name the script and run directory
 TEST_DICT[test_name] = {'args' : args_multimer,
-                        'test' :  AMPLETest,
+                        'test' :  AMPLETest2,
                         'setup' :  copy_files
                        }
 
