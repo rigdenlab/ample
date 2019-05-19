@@ -3,18 +3,17 @@ TRIMER = 'trimer'
 TETRAMER = 'tetramer'
 MULTIMER_MODES = [DIMER, TRIMER, TETRAMER]
 
-SYMFILE_DIMER = """symmetry_name c3
-subunits 3
+SYMFILE_DIMER = """symmetry_name c2
+subunits 2
 recenter
 number_of_interfaces  1
-E = 3*VRT0001 + 3*(VRT0001:VRT0002)
+E = 2*VRT0001 + 1*(VRT0001:VRT0002)
 anchor_residue COM
 virtual_transforms_start
 start -1,0,0 0,1,0 0,0,0
-rot Rz 3
+rot Rz 2
 virtual_transforms_stop
 connect_virtual JUMP1 VRT0001 VRT0002
-connect_virtual JUMP2 VRT0002 VRT0003
 set_dof BASEJUMP x(50) angle_x(0:360) angle_y(0:360) angle_z(0:360)
 """
 
@@ -33,18 +32,19 @@ connect_virtual JUMP2 VRT0002 VRT0003
 set_dof BASEJUMP x(50) angle_x(0:360) angle_y(0:360) angle_z(0:360)
 """
 
-SYMFILE_TETRAMER = """symmetry_name c3
-subunits 3
+SYMFILE_TETRAMER = """symmetry_name c4
+subunits 4
 recenter
-number_of_interfaces  1
-E = 3*VRT0001 + 3*(VRT0001:VRT0002)
+number_of_interfaces  2
+E = 4*VRT0001 + 4*(VRT0001:VRT0002) + 2*(VRT0001:VRT0003)
 anchor_residue COM
 virtual_transforms_start
 start -1,0,0 0,1,0 0,0,0
-rot Rz 3
+rot Rz 4
 virtual_transforms_stop
 connect_virtual JUMP1 VRT0001 VRT0002
 connect_virtual JUMP2 VRT0002 VRT0003
+connect_virtual JUMP3 VRT0003 VRT0004
 set_dof BASEJUMP x(50) angle_x(0:360) angle_y(0:360) angle_z(0:360)
 """
 
@@ -74,10 +74,8 @@ FLAGSFILE_STR = """-run:protocol broker
 -in:file:frag9 {frags9}
 -evaluation:rmsd_column _ 
 -evaluation:symmetric_rmsd 
-#-out:nstruct 1000 
 -relax:quick 
 -relax:jump_move 
-#-out:path:pdb ./ 
 -out:pdb 
 -mute core.io.database 
 -out:file:scorefile score.sc 

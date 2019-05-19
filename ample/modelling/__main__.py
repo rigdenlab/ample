@@ -28,6 +28,7 @@ def process_args(args):
 parser = argparse.ArgumentParser(description="AMPLE Modelling Module")
 # Need to add seperately here as is usually part of MR options
 parser.add_argument('-fasta', help='protein fasta file.')
+parser.add_argument('-nchains', help='The number of chains to select from the multimer for the final single-chain models')
 argparse_util.add_core_options(parser)
 argparse_util.add_rosetta_options(parser)
 argparse_util.add_cluster_submit_options(parser)
@@ -65,6 +66,7 @@ rm.models_dir = os.path.join(args.work_dir, "models")
 rm.frags_3mers = args.frags_3mers
 rm.frags_9mers = args.frags_9mers
 rm.multimer_modelling = args.multimer_modelling
+rm.nchains = args.nchains
 
 rm.nproc = args.nproc
 rm.submit_cluster = args.submit_cluster
