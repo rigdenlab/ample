@@ -135,6 +135,7 @@ def mrbump_keyword_file(odict, fixed_iden=0.6):
     # Extra keywords
     # This assumes everything in mr_keys is a list of [ KEYWORD, VALUE0, VALUE1, ...]
     if odict['mr_keys']:
-        for l in odict['mr_keys']: mrs += "  ".join(l) + "\n"
+        for l in odict['mr_keys']:
+            mrs += "  ".join(l) + "\n"
     mrs += 'END\n'
     return mrs

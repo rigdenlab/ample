@@ -208,6 +208,11 @@ def process_options(optd):
         # Add in Owen's fixes
         optd['rg_reweight'] = 0.0
         optd['domain_termini_distance'] = optd['fasta_length'] * 1.5
+        pkey = ['PKEYWORD', 'TNCS', 'USE', 'OFF']
+        if isinstance(optd['mr_keys'], list):
+            optd['mr_keys'].append(pkey)
+        else:
+            optd['mr_keys'] = [pkey]
     process_ensemble_options(optd)
     process_mr_options(optd)
     process_benchmark_options(optd)
