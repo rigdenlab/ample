@@ -315,6 +315,7 @@ class RosettaModel(object):
         if self.num_chains and self.num_chains < len(chaind):
             # for now we just assume we want continguous ones
             chains = list(chaind.keys())[:self.num_chains]
+            logger.info("Selecting chains {} from multimer models".format(chains))
         models = []
         for i, pdbin in enumerate(modelsin):
             pdbout = os.path.join(self.models_dir, "multimermodel_{}.pdb".format(i))
@@ -941,7 +942,7 @@ class RosettaModel(object):
         
         # Multimer modelling
         self.multimer_modelling = optd['multimer_modelling']
-        self.nchains = optd['nmasu']
+        self.num_chains = optd['nmasu']
         
         # Runtime options
         self.nproc = optd['nproc']
