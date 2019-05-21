@@ -246,7 +246,20 @@ class RosettaModel(object):
         return cmd
 
     def ab_initio_model(self, processed_models=None):
-        """Run the ab initio modelling and return a list of models."""
+        """Run the ab initio modelling and return a list of models.
+
+        Parameters
+        ----------
+        processed_models : list
+           A list of pdb models that should have been checked for suitability.
+           NB - currently only required by NMR remodelling
+ 
+        Returns
+        -------
+        list
+           The list of created ab initio pdb models
+        
+        """
         
         if self.nmr_remodel:
             return self.do_nmr_remodel(processed_models)
