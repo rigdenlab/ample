@@ -5,7 +5,6 @@
 #
 # Ronan Keegan 25/10/2011
 #
-
 import logging
 import os
 import subprocess
@@ -16,20 +15,16 @@ import time
 logger = logging.getLogger(__name__)
 
 class ClusterRun:
-
     def __init__(self):
 
-        self.qList=[]
-        self.runningQueueList=[]
-        self.QTYPE=""
-
+        self.qList= []
+        self.runningQueueList = []
+        self.QTYPE = ""
         self.modeller = None
-
-        self.runDir=None
-        self.logDir=None
+        self.runDir = None
+        self.logDir = None
         self._scriptFile  = None
-        self.debug=True
-        
+        self.debug = True
         return
 
     def cleanUpArrayJob(self, scriptFile=None, logDir=None):
@@ -66,39 +61,6 @@ class ClusterRun:
                 logger.critical("Cannot find logfile {0} to copy to {1}".format(oldLog, newLog))
         return
 
-    # Currently unused
-    def XgetJobStatus(self, qNumber):
-        """ Check a job status int the cluster queue """
-
-        status=1
-
-        command_line='qstat -j %d' % qNumber
-
-        process_args = shlex.split(command_line)
-        p = subprocess.Popen(process_args, stdin = subprocess.PIPE,
-                                    stdout = subprocess.PIPE, stderr=subprocess.PIPE)
-
-        (child_stdout, child_stderr, child_stdin) = (p.stdout, p.stderr, p.stdin)
-
-        # Write the keyword input
-        child_stdin.close()
-
-        child_stdout.close()
-
-        # Watch the output for successful termination
-        err=child_stderr.readline()
-
-        while err:
-            #sys.stdout.write(out)
-            if self.QTYPE=="SGE":
-                if "Following jobs do not exist" in err:
-                    status=0
-            err=child_stderr.readline()
-
-        child_stderr.close()
-
-        return status
-    
     def getRunningJobList(self, user=""):
         """ Check a job status int the cluster queue 
 
@@ -108,7 +70,6 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                                              ida2a40
                                              ida2a40
 """
-
         if self.QTYPE=="SGE":
             if user == "":
                 command_line='qstat'
@@ -120,24 +81,17 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             else:
                 command_line='bjobs -u ' + user
 
-        log_lines=[]
-        self.runningQueueList=[]
-
+        log_lines = []
+        self.runningQueueList = []
         process_args = shlex.split(command_line)
-        p = subprocess.Popen(process_args, stdout = subprocess.PIPE)
-
+        p = subprocess.Popen(process_args, stdout=subprocess.PIPE)
         child_stdout = p.stdout
-
-        # Read the output
-        out=child_stdout.readline()
-
+        out = child_stdout.readline()
         while out:
             #sys.stdout.write(out)
-            log_lines.append( out.strip() )
+            log_lines.append(out.strip())
             out=child_stdout.readline()
-
         child_stdout.close()
-
         if log_lines != []:
             log_lines.pop(0)
             # SGE has extra header
@@ -152,14 +106,11 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
 
         if not len(self.qList):
             raise RuntimeError("No jobs found in self.qList!")
-
         logger.info("Jobs submitted to cluster queue, awaiting their completion...")
-
         # set a holder for the qlist
-        runningList=self.qList
-        newRunningList=[]
-
-        while runningList!=[]:
+        runningList = self.qList
+        newRunningList = []
+        while runningList != []:
             time.sleep(60)
             self.getRunningJobList(user)
             for job in runningList:
@@ -169,10 +120,10 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 logger.info("Queue Monitor: %d out of %d jobs remaining in cluster queue..." %  (len(newRunningList),len(self.qList)))
             if len(newRunningList) == 0:
                 logger.info("Queue Monitor: All jobs complete!")
-            runningList=newRunningList
-            newRunningList=[]
-            if monitor: monitor()
-            
+            runningList = newRunningList
+            newRunningList = []
+            if monitor:
+                monitor()
         return
 
     def queueDirectives(self,
@@ -185,8 +136,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                         submit_pe_sge='mpi',
                         submit_pe_lsf='#BSUB -R "span[ptile={0}]"',
                         submit_qtype=None,
-                        submit_queue=None,
-                        ):
+                        submit_queue=None):
         """
         Create a string suitable for writing out as the header of the submission script
         for submitting to a particular queueing system.
@@ -210,26 +160,38 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                    '#$ -w e\n',
                    '#$ -V\n',
                    '#$ -S /bin/bash\n']
-            if job_time: sh += ['#$ -l h_rt={0}\n'.format(job_time)]
-            if submit_queue: sh += ['#$ -q {0}\n'.format(submit_queue)]
-            if job_name: sh += ['#$ -N {0}\n'.format(job_name)]
+            if job_time:
+                sh += ['#$ -l h_rt={0}\n'.format(job_time)]
+            if submit_queue:
+                sh += ['#$ -q {0}\n'.format(submit_queue)]
+            if job_name:
+                sh += ['#$ -N {0}\n'.format(job_name)]
             if submit_num_array_jobs:
                 sh += ['#$ -o arrayJob_$TASK_ID.log\n']
                 sh += ['#$ -t 1-{0}\n'.format(submit_num_array_jobs)]
-                if submit_max_array: sh += ['#$ -tc {0}\n'.format(submit_max_array)]
+                if submit_max_array:
+                    sh += ['#$ -tc {0}\n'.format(submit_max_array)]
             else:
-                if log_file: sh += ['#$ -o {0}\n'.format(log_file)]
-            if nproc and nproc > 1: sh += ['#$ -pe {0} {1}\n'.format(submit_pe_sge, nproc)]
+                if log_file:
+                    sh += ['#$ -o {0}\n'.format(log_file)]
+            if nproc and nproc > 1:
+                sh += ['#$ -pe {0} {1}\n'.format(submit_pe_sge, nproc)]
+            # Later versions of SGE don't properly export the PATH so need to do it ourselves
+            sh +=['export PATH=${PATH}:${SGE_O_PATH}\n']
             sh += ['\n']
         elif submit_qtype=="LSF":
-            if nproc and submit_pe_lsf: sh += [submit_pe_lsf.format(nproc) + os.linesep]
+            if nproc and submit_pe_lsf:
+                sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
                 sh += ['#BSUB -W {0}\n'.format(job_time/60)]
             else:
                 sh += ['#BSUB -W 4:00\n']
-            if nproc and nproc > 1: sh += ['#BSUB -n {0}\n'.format(nproc)]
-            if submit_queue: sh += ['#BSUB -q {0}\n'.format(submit_queue)]
-            if log_file: sh += ['#BSUB -o {0}\n'.format(log_file)]
+            if nproc and nproc > 1:
+                sh += ['#BSUB -n {0}\n'.format(nproc)]
+            if submit_queue:
+                sh += ['#BSUB -q {0}\n'.format(submit_queue)]
+            if log_file:
+                sh += ['#BSUB -o {0}\n'.format(log_file)]
             if submit_num_array_jobs:
                 assert job_name,"LSF array job requires a job name"
                 sh += ['#BSUB -o arrayJob_%I.log\n']
@@ -237,7 +199,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                     sh += ['#BSUB -J {0}[1-{1}]%{2}\n'.format(job_name, submit_num_array_jobs, submit_max_array)]
                 else:
                     sh += ['#BSUB -J {0}[1-{1}]\n'.format(job_name, submit_num_array_jobs)]
-            elif job_name: sh += ['#BSUB -J {0}\n'.format(job_name)]       
+            elif job_name:
+                sh += ['#BSUB -J {0}\n'.format(job_name)]       
             sh += ['\n']
         else:
             raise RuntimeError("Unrecognised QTYPE: {0}".format(submit_queue))
@@ -293,16 +256,16 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if "Your job-array" in out:
                     # Array jobs have different form
                     #Your job-array 19094.1-10:1 ("array.script") has been submitted
-                    qNumber=int(out.split()[2].split(".")[0])
+                    qNumber = int(out.split()[2].split(".")[0])
                     self.qList.append(qNumber)
                 elif "Your job" in out:
-                    qNumber=int(out.split()[2])
+                    qNumber = int(out.split()[2])
                     self.qList.append(qNumber)
             elif self.QTYPE == "LSF":
                 # Job <35339> is submitted to queue <q1h32>.
                 if "is submitted to queue" in out:
-                    qStr=out.split()[1]
-                    qNumber=int(qStr.strip("<>"))
+                    qStr = out.split()[1]
+                    qNumber = int(qStr.strip("<>"))
                     self.qList.append(qNumber)                
             if qNumber:
                 logger.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
@@ -383,4 +346,3 @@ $script
         with open(arrayScript,'w') as f: f.write(s)
         self.submitJob(arrayScript)
         return
-
