@@ -332,7 +332,10 @@ class RosettaModel(object):
         models = []
         for i, pdbin in enumerate(modelsin):
             pdbout = os.path.join(self.models_dir, "multimermodel_{}.pdb".format(i))
-            pdb_edit.merge_chains(pdbin, pdbout, chains=chains)
+            if chains and len(chains) == 1:
+                pdb_edit.extract_chain(pdbin, pdbout, chainID=chains[0])
+            else:
+                pdb_edit.merge_chains(pdbin, pdbout, chains=chains)
             models.append(pdbout)
         return models
         
