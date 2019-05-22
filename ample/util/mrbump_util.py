@@ -670,7 +670,7 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
     with open(script_path, "w") as job_script:
         # Header
         if not sys.platform.startswith("win"):
-            script_header = '#!/bin/sh\n'
+            script_header = '#!/bin/bash\n'
             script_header += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
             job_script.write(script_header)
         
