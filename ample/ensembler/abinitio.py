@@ -193,7 +193,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                                            num_clusters=num_clusters,
                                            cluster_dir=cluster_dir):
             if len(cluster) < 2:
-                logger.info("Cannot truncate cluster %d as < 2 models!", cluster.index)
+                logger.warning("Cannot truncate cluster %d as < 2 models!", cluster.index)
                 continue
             logger.info('Processing cluster: %d', cluster.index)
 
