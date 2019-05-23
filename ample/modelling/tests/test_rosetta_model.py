@@ -24,25 +24,26 @@ class Test(unittest.TestCase):
         m.sequence_length = 4
         cfile = m.create_multimer_constraints_file()
         
-        ref = """AtomPair CA    1 CA    4 FLAT HARMONIC 6.00 3.00 5.00
-AtomPair CA   1A CA   1B FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   2A CA   2B FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   3A CA   3B FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   4A CA   4B FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA    1 CA    4 FLAT HARMONIC 6.00 3.00 5.00
-AtomPair CA   1A CA   1C FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   2A CA   2C FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   3A CA   3C FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   4A CA   4C FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA    1 CA    4 FLAT HARMONIC 6.00 3.00 5.00
-AtomPair CA   1B CA   1C FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   2B CA   2C FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   3B CA   3C FLAT HARMONIC 10.00 3.00 5.00
-AtomPair CA   4B CA   4C FLAT HARMONIC 10.00 3.00 5.00
+        ref = """AtomPair CA    1 CA    4 FLAT_HARMONIC 6.00 3.00 5.00
+AtomPair CA   1A CA   1B FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   2A CA   2B FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   3A CA   3B FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   4A CA   4B FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA    1 CA    4 FLAT_HARMONIC 6.00 3.00 5.00
+AtomPair CA   1A CA   1C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   2A CA   2C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   3A CA   3C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   4A CA   4C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA    1 CA    4 FLAT_HARMONIC 6.00 3.00 5.00
+AtomPair CA   1B CA   1C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   2B CA   2C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   3B CA   3C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   4B CA   4C FLAT_HARMONIC 10.00 3.00 5.00
 """
         with open(cfile) as f:
             fstr = f.read()
-        self.assertEquals(fstr, ref, "Contents of constraints files don't match: {}".format(cfile))
+        #self.assertEquals(fstr, ref, "Contents of constraints files don't match: {}".format(cfile))
+        self.assertEquals(fstr, ref)
         os.unlink(cfile)
 
     def XtestMakeFragments(self):
