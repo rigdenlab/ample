@@ -32,7 +32,7 @@ __credits__ = "Daniel Rigden, Martyn Winn, and Olga Mayans"
 __email__ = "drigden@liverpool.ac.uk"
 __version__ = version.__version__
 
-logger = logging_util.setup_console_logging()
+logger = None
 monitor = None
 
 
@@ -58,11 +58,14 @@ class Ample(object):
         for the program - required for testing.
         """
         argso = argparse_util.process_command_line(args=args)
-
+        # SWork directory and loggers need to be setup before we do anything else
+        self.setup_workdir(argso)
+        global logger
+        logger = logging_util.setup_logging(argso)
+        
+        # Logging and work directories in place so can start work
         self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
-
-        # Setup things like logging, file structure, etc...
         amopt.d = self.setup(amopt.d)
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d)
 
@@ -439,39 +442,7 @@ class Ample(object):
 
         """
         optd = options_processor.restart_amoptd(optd)
-
-        # Make a work directory - this way all output goes into this directory
-        if optd['work_dir'] and not optd['restart_pkl']:
-            logger.info('Making a named work directory: %s', optd['work_dir'])
-            try:
-                os.mkdir(optd['work_dir'])
-            except Exception as e:
-                msg = "Cannot create work_dir {0}: {1}".format(optd['work_dir'], e)
-                exit_util.exit_error(msg, sys.exc_info()[2])
-
-        if not optd['work_dir']:
-            if not os.path.exists(optd['run_dir']):
-                msg = 'Cannot find run directory: {0}'.format(optd['run_dir'])
-                exit_util.exit_error(msg, sys.exc_info()[2])
-
-            if bool(optd['rvapi_document']):
-                # With JSCOFE we run in the run directory
-                optd['work_dir'] = optd['run_dir']
-            else:
-                logger.info('Making a run directory: ' 'checking for previous runs...')
-                optd['work_dir'] = ample_util.make_workdir(optd['run_dir'], ccp4i2=bool(optd['ccp4i2_xml']))
-
-        os.chdir(optd['work_dir'])
-
-        ample_log = os.path.join(optd['work_dir'], 'AMPLE.log')
-        debug_log = os.path.join(optd['work_dir'], 'debug.log')
-        optd['ample_log'] = ample_log
-
-        logging_util.setup_file_logging(ample_log, level=logging.INFO)
-        logging_util.setup_file_logging(debug_log, level=logging.DEBUG)
-
         optd['ccp4_version'] = ample_util.CCP4.version.version
-
         logger.info(reference_manager.header)
         logger.info("AMPLE version: %s", str(version.__version__))
         logger.info("Running with CCP4 version: %s from directory: %s", ample_util.CCP4.version, ample_util.CCP4.root)
@@ -486,7 +457,6 @@ class Ample(object):
             self.ample_output.display_results(optd)
 
         options_processor.check_mandatory_options(optd)
-
         optd = options_processor.process_restart_options(optd)
         if not optd['restart_pkl']:
             options_processor.process_options(optd)
@@ -500,6 +470,29 @@ class Ample(object):
         logger.info('All needed programs are found, continuing...')
         return optd
 
+    def setup_workdir(self, argso):
+        # Make a work directory - this way all output goes into this directory
+        if argso['work_dir'] and not argso['restart_pkl']:
+            print('Making a named work directory: %s', argso['work_dir'])
+            try:
+                os.mkdir(argso['work_dir'])
+            except Exception as e:
+                msg = "Cannot create work_dir {0}: {1}".format(argso['work_dir'], e)
+                exit_util.exit_error(msg, sys.exc_info()[2])
+
+        if not argso['work_dir']:
+            if not os.path.exists(argso['run_dir']):
+                msg = 'Cannot find run directory: {0}'.format(argso['run_dir'])
+                exit_util.exit_error(msg, sys.exc_info()[2])
+            if bool(argso['rvapi_document']):
+                # With JSCOFE we run in the run directory
+                argso['work_dir'] = argso['run_dir']
+            else:
+                print('Making a run directory: ' 'checking for previous runs...')
+                argso['work_dir'] = ample_util.make_workdir(argso['run_dir'],
+                                                            ccp4i2=bool(argso['ccp4i2_xml']))
+        os.chdir(argso['work_dir'])
+        return argso['work_dir']
 
 if __name__ == "__main__":
     try:

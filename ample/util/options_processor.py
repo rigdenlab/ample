@@ -550,7 +550,7 @@ def restart_amoptd(optd):
     Description
     -----------
     For any new command-line options, we update the old dictionary with the new values
-    We then go through the new dictionary and set ant of the flags corresponding to the data we find:
+    We then go through the new dictionary and set any of the flags corresponding to the data we find:
 
     Notes
     -----

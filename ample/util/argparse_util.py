@@ -26,6 +26,7 @@ __date__ = "03 Apr 2016"
 __version__ = "1.0"
 
 import argparse
+import os
 from ample.modelling.multimer_definitions import MULTIMER_MODES
 
 
@@ -95,7 +96,7 @@ def add_general_options(parser=None):
     parser.add_argument('-psipred_ss2', metavar='PSIPRED_FILE', help='Psipred secondary structure prediction file')
     parser.add_argument('-quick_mode', metavar='True/False', help='Preset options to run quickly, but less thoroughly')
     parser.add_argument('-restart_pkl', help='Rerun a job using the pickled ample dictionary')
-    parser.add_argument('-run_dir', metavar='run_directory', help='Directory where the AMPLE work directory will be created [current dir]')
+    parser.add_argument('-run_dir', metavar='run_directory', help='Directory where the AMPLE work directory will be created [current dir]', default=os.getcwd())
     parser.add_argument('-rvapi_document', help='Path to an existing rvapi document (for running under jscofe)')
     parser.add_argument('-scwrl_exe', metavar='path to scwrl', help='Path to Scwrl4 executable')
     parser.add_argument('-show_gui', metavar='True/False', help='Pop up and display a stand-alone GUI')
@@ -246,5 +247,4 @@ def process_command_line(args=None, contacts=True, modelling=True, mol_rep=True)
         add_mr_options(parser)
     if modelling:
         add_rosetta_options(parser)
-
-    return parser.parse_args(args)
+    return vars(parser.parse_args(args))

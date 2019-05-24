@@ -180,9 +180,7 @@ class AMPLEConfigOptions(object):
         }
 
     def populate(self, cmdline_opts):
-        
-        # Convert Namespace to Dictionary
-        self.cmdline_opts = cmdline_opts = vars(cmdline_opts)
+        self.cmdline_opts = cmdline_opts
 
         # Identify which config file to use
         config_file = self._get_config_file(cmdline_opts['config_file'])
@@ -226,9 +224,6 @@ class AMPLEConfigOptions(object):
 
         if "rcdir" in self.d and not self.d["rcdir"]:
             self.d["rcdir"] = os.path.join(os.path.expanduser("~"), ".ample")
-
-        if "run_dir" in self.d and not self.d["run_dir"]:
-            self.d["run_dir"] = os.getcwd()
 
         # Set full file paths
         for k, v in self.d.iteritems():

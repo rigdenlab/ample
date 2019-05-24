@@ -6,16 +6,10 @@ if "CCP4" not in os.environ.keys():
 
 __all__ = ["AMPLE_DIR", "SHARE_DIR", "AMPLE_CONFIG_FILE"]
 
-# AMPLE source code directory
 AMPLE_DIR = os.path.join(os.environ["CCP4"], "lib", "py2", "ample")
-
-# AMPLE share data directory
 SHARE_DIR = os.path.join(os.environ["CCP4"], "share", "ample")
-
-# AMPLE configuration file
 AMPLE_CONFIG_FILE = os.path.join(SHARE_DIR, "include", "ample.ini")
-
-# Named files/directories
+AMPLE_LOGGER_CONFIG = os.path.join(SHARE_DIR, "include", "logging.json")
 AMPLE_PKL = 'resultsd.pkl'
 AMPLEDIR = 'AMPLE_'
 I2DIR = 'AMPLEI2'
