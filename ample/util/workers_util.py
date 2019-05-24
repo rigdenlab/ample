@@ -105,27 +105,23 @@ def run_scripts(job_scripts,
                                    monitor=monitor,
                                    job_time=job_time,
                                    job_name=job_name,
-                                   submit_cluster=submit_cluster,
                                    submit_qtype=submit_qtype,
                                    submit_queue=submit_queue,
                                    submit_pe_lsf=submit_pe_lsf,
                                    submit_pe_sge=submit_pe_sge,
                                    submit_array=submit_array,
-                                   submit_max_array=submit_max_array
-                                   )
+                                   submit_max_array=submit_max_array)
     else:
         return run_scripts_serial(job_scripts,
                                   nproc=nproc,
                                   monitor=monitor,
                                   early_terminate=early_terminate,
-                                  check_success=check_success,
-                                  )
+                                  check_success=check_success)
 
 def run_scripts_cluster(job_scripts,
                         monitor=None,
                         job_time=None,
                         job_name=None,
-                        submit_cluster=None,
                         submit_qtype=None,
                         submit_queue=None,
                         submit_pe_lsf=None,
@@ -160,10 +156,10 @@ def run_scripts_cluster(job_scripts,
                                                              submit_queue=submit_queue,
                                                              submit_qtype=submit_qtype,
                                                              submit_pe_lsf=submit_pe_lsf,
-                                                             submit_pe_sge=submit_pe_sge
-                                                             )
+                                                             submit_pe_sge=submit_pe_sge)
             # We add the queue directives after the first line of the script
-            with open(script,'w') as f: f.writelines("".join([lines[0]] + slines + lines[1:]))
+            with open(script,'w') as f:
+                f.writelines("".join([lines[0]] + slines + lines[1:]))
             os.chmod(script, 0o777)
             cluster_run.submitJob(script)
 
