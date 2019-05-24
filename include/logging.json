@@ -1,0 +1,42 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "simpleFormatter": {
+            "format": "%(message)s\n"
+        },
+        "colourFormatter": {
+            "()": "ample.util.logging_util.LogColorFormatter",
+            "format": "%(message)s\n"
+        },
+        "debugFormatter": {
+            "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        }
+    },
+    "handlers": {
+        "console_handler": {
+            "class": "logging.StreamHandler",
+            "level": "INFO",
+            "formatter": "colourFormatter",
+            "stream": "ext://sys.stdout"
+        },
+        "file_handler": {
+            "class": "logging.FileHandler",
+            "level": "INFO",
+            "formatter": "simpleFormatter",
+            "filename": "ample.log",
+            "mode": "w"
+        },
+        "debug_file_handler": {
+            "class": "logging.FileHandler",
+            "level": "DEBUG",
+            "formatter": "debugFormatter",
+            "filename": "debug.log",
+            "mode": "w"
+        }
+    },
+    "root": {
+        "level": "NOTSET",
+        "handlers": ["console_handler", "file_handler",  "debug_file_handler"]
+    }
+}
