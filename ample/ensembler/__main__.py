@@ -46,7 +46,7 @@ else:
     optd = amopt.d
 
 # Start logging to the console
-logging_util.setup_console_logging()
+logger = logging_util.setup_console_logging()
 
 # Make sure we have models if in standalone mode
 if not restart and not ('models' in optd and optd['models'] and os.path.exists(optd['models'])):

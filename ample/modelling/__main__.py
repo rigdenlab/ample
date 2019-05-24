@@ -43,9 +43,7 @@ args = parser.parse_args()
 process_args(args)
 
 # Start logging to the console
-logging_util.setup_console_logging()
-
-logger = logging.getLogger()
+logger = logging_util.setup_console_logging()
 logger.info("*** AMPLE ROSETTA modelling package ***")
 
 if not os.path.isdir(args.work_dir):

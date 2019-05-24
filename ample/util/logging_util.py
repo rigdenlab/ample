@@ -30,17 +30,22 @@ def setup_logging(argso):
     """Read JSON config for logger and return root logger
     
     Also sets the path to the AMPLE logfile in the dictionary (required for pyrvapi)"""
+    if not os.path.isfile(AMPLE_LOGGER_CONFIG):
+        raise RuntimeError("Cannot find AMPLE_LOGGER_CONFIG file: {}".format(AMPLE_LOGGER_CONFIG))
     with open(AMPLE_LOGGER_CONFIG, 'rt') as f:
         config = json.load(f)
     logging.config.dictConfig(config)
-    argso['ample_log'] = os.path.abspath(config['handlers']['file_handler']['filename'])
+    try:
+        argso['ample_log'] = os.path.abspath(config['handlers']['file_handler']['filename'])
+    except KeyError:
+        argso['ample_log'] = None
     return logging.getLogger()   
 
 
 def setup_console_logging(level=logging.INFO,
                           formatstr='%(message)s\n'):
     """
-    Set up logging to the console - required for the test framework.
+    Set up logging to the console - required for the individual modules.
     
     Parameters
     ----------
@@ -65,4 +70,32 @@ def setup_console_logging(level=logging.INFO,
     formatter = logging.Formatter(formatstr) 
     cl.setFormatter(formatter)
     logger.addHandler(cl)
+    return logger
+
+def setup_file_logging(logfile,
+                       level=logging.DEBUG,
+                       formatstr='%(asctime)s - %(name)s - %(levelname)s - %(message)s'):
+    """
+    Set up logging to a file - required for the individual modules.
+    
+    Parameters
+    ----------
+    logfile : str
+        The path to the logfile that output will be written to.
+    level : int
+        Sets the threshold for the console output to level.
+    formatstr : str
+        The string used to format the log messages
+        
+    Returns
+    -------
+    logger : :obj:logging.logger
+        The root logger
+    """
+    logger = logging.getLogger()
+    fl = logging.FileHandler(logfile)
+    fl.setLevel(level)
+    formatter = logging.Formatter(formatstr)
+    fl.setFormatter(formatter)
+    logger.addHandler(fl)
     return logger
