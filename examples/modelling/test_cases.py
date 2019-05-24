@@ -35,9 +35,9 @@ args_default =  [
 
 class AMPLETest1(TestCase):
     def test_modelling_default(self):
-        models_dir = os.path.join(os.getcwd(), test_name, "models")
-        nmodels = len(glob.glob(os.path.join(models_dir, "*.pdb")))
-        self.assertEqual(nmodels, 3, "Only {} models in directory {}".format(nmodels, models_dir))
+        models_dir1 = os.path.join(os.getcwd(), test_name, "models")
+        nmodels1 = len(glob.glob(os.path.join(models_dir1, "*.pdb")))
+        self.assertEqual(nmodels1, 3, "Only {} models in directory {}".format(nmodels1, models_dir1))
         return
     
 def copy_files(run_dir):
@@ -66,9 +66,9 @@ args_multimer =  [
 
 class AMPLETest2(TestCase):
     def test_modelling_multimer(self):
-        models_dir = os.path.join(os.getcwd(), test_name, "models")
-        models = glob.glob(os.path.join(models_dir, "*.pdb"))
-        self.assertEqual(len(models), 1)
+        models_dir2 = os.path.join(os.getcwd(), test_name, "models")
+        nmodels2 = len(glob.glob(os.path.join(models_dir2, "*.pdb")))
+        self.assertEqual(nmodels2, 1)
         return
 
 # Add everything to the test_dict - the key is used to name the script and run directory
