@@ -106,7 +106,8 @@ class MRinfo(object):
         if hasattr(sp, 'MPE'):
             self.MPE = sp.MPE
         self.wMPE = sp.wMPE
-        self.originShift = [ o*-1 for o in sp.originShift ]
+        if isinstance(sp.originShift, list):
+            self.originShift = [ o*-1 for o in sp.originShift ]
 
         if cleanup:
             for ext in ['.hkl', '.ent', '.pda','.pdo','.phs','.lst','_trace.ps']:
