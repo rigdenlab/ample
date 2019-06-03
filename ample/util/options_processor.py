@@ -368,8 +368,7 @@ def process_mr_options(optd):
             exit_util.exit_error(msg)
         else:
             optd['phaser_rms'] = phaser_rms
-            
-            
+
     # Disable all rebuilding if the resolution is too poor
     if optd['mtz_min_resolution'] >= mrbump_util.REBUILD_MAX_PERMITTED_RESOLUTION:
         logger.warn("!!! Disabling all rebuilding as maximum resolution of %f is too poor!!!".format(optd['mtz_min_resolution']))
@@ -380,7 +379,6 @@ def process_mr_options(optd):
         optd['refine_rebuild_arpwarp'] = False
         optd['refine_rebuild_buccaneer'] = False
         
-            
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
         if optd['mtz_min_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
@@ -405,6 +403,10 @@ def process_mr_options(optd):
     if optd['shelxe_rebuild']:
         optd['shelxe_rebuild_arpwarp'] = True
         optd['shelxe_rebuild_buccaneer'] = True
+        
+    # If shelxe_rebuild is set we need use_shelxe to be set
+    if (optd['shelxe_rebuild'] or optd['shelxe_rebuild_arpwarp']  or optd['shelxe_rebuild_buccaneer']) and not optd['use_shelxe']:
+        raise RuntimeError('shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.')
 
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         auto_tracing_sh = None
@@ -428,10 +430,6 @@ def process_mr_options(optd):
         logger.info('Rebuilding in Bucaneer')
     else:
         logger.info('Not rebuilding in Bucaneer')
-
-    # If shelxe_rebuild is set we need use_shelxe to be set
-    if optd['shelxe_rebuild'] and not optd['use_shelxe']:
-        raise RuntimeError('shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.')
 
 
 def process_restart_options(optd):
@@ -457,7 +455,7 @@ def process_restart_options(optd):
        make_mr = True
        - create and run the mrbump jobs - see above
 
-       # BElow all same as default
+       # Below all same as default
     - if models and no ensembles
       - create ensembles from the models
 
@@ -520,9 +518,6 @@ def process_restart_options(optd):
             logger.info('Restarting from existing ensembles: %s', optd['ensembles'])
         elif 'models_dir' in optd and optd['models_dir'] and os.path.isdir(optd['models_dir']):
             logger.info('Restarting from existing models: %s', optd['models_dir'])
-            allsame = False if optd['homologs'] else True
-            if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=None, single=True, allsame=allsame):
-                raise RuntimeError("Error importing restart models: {0}".format(optd['models_dir']))
             optd['make_ensembles'] = True
         elif optd['frags_3mers'] and optd['frags_9mers']:
             logger.info('Restarting from existing fragments: %s, %s', optd['frags_3mers'], optd['frags_9mers'])
