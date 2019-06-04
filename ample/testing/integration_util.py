@@ -82,7 +82,8 @@ class AMPLEIntegrationFramework(object):
         # Make a directory to keep all files together
         _root = os.path.abspath(run_dir) if run_dir else self.get_run_dir()
         self.run_dir = os.path.join(_root, "ample_testing")
-        if not os.path.isdir(self.run_dir): os.mkdir(self.run_dir)
+        if not os.path.isdir(self.run_dir):
+            os.mkdir(self.run_dir)
     
     def get_run_dir(self):
         return os.getcwd()
@@ -158,7 +159,7 @@ class AMPLEIntegrationFramework(object):
         return 
     
     def _create_scripts(self, rosetta_dir, **kwargs):
-        """Create scripts and path to resultsd"""
+        """Create scripts and set path to working directory"""
         scripts = []
         owd = os.getcwd()
         for name in self.test_dict.keys():
@@ -186,8 +187,8 @@ class AMPLEIntegrationFramework(object):
                 continue
             script = self.write_script(work_dir,  args + [['-work_dir', work_dir]], testcase_type)
             scripts.append(script)
-            # Set path to the results pkl file we will use to run the tests
-            self.test_dict[name]['resultsd'] = os.path.join(work_dir, AMPLE_PKL)
+            # Set path to the directory the case is run so we can pass it to the unittest
+            self.test_dict[name]['work_dir'] = work_dir
             
             # Run the setup function if one is provided
             if 'setup' in self.test_dict[name] and callable(self.test_dict[name]['setup']):
@@ -241,7 +242,8 @@ class AMPLEIntegrationFramework(object):
         suite = TestSuite()
         for name in self.test_dict.keys():
             testClass = self.test_dict[name]['test']
-            testClass.RESULTS_PKL = self.test_dict[name]['resultsd']
+            testClass.WORK_DIR = self.test_dict[name]['work_dir']
+            testClass.RESULTS_PKL = os.path.join(testClass.WORK_DIR, AMPLE_PKL)
             _suite = TestLoader().loadTestsFromTestCase(testClass)
             suite.addTests(_suite)  
         TextTestRunner(verbosity=2).run(suite)
