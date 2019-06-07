@@ -221,6 +221,7 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if log_file: sh += ['#$ -o {0}\n'.format(log_file)]
             if nproc and nproc > 1: sh += ['#$ -pe {0} {1}\n'.format(submit_pe_sge, nproc)]
             sh += ['\n']
+            sh += ['export PATH=${PATH}:${SGE_O_PATH}\n'] #Fix to address new version SGE PATH problem
         elif submit_qtype=="LSF":
             if nproc and submit_pe_lsf: sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
