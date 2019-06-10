@@ -138,7 +138,6 @@ def ensembler_factory(amoptd):
         fast_protein_cluster_exe=amoptd['fast_protein_cluster_exe'],
         gesamt_exe=amoptd['gesamt_exe'],
         lsqkab_exe=amoptd['lsqkab_exe'],
-        maxcluster_exe=amoptd['maxcluster_exe'],
         scwrl_exe=amoptd['scwrl_exe'],
         spicker_exe=amoptd['spicker_exe'],
         theseus_exe=amoptd['theseus_exe'],

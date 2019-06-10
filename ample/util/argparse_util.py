@@ -26,6 +26,8 @@ __date__ = "03 Apr 2016"
 __version__ = "1.0"
 
 import argparse
+import os
+from ample.modelling.multimer_definitions import MULTIMER_MODES
 
 
 def add_core_options(parser=None):
@@ -94,7 +96,7 @@ def add_general_options(parser=None):
     parser.add_argument('-psipred_ss2', metavar='PSIPRED_FILE', help='Psipred secondary structure prediction file')
     parser.add_argument('-quick_mode', metavar='True/False', help='Preset options to run quickly, but less thoroughly')
     parser.add_argument('-restart_pkl', help='Rerun a job using the pickled ample dictionary')
-    parser.add_argument('-run_dir', metavar='run_directory', help='Directory where the AMPLE work directory will be created [current dir]')
+    parser.add_argument('-run_dir', metavar='run_directory', help='Directory where the AMPLE work directory will be created [current dir]', default=os.getcwd())
     parser.add_argument('-rvapi_document', help='Path to an existing rvapi document (for running under jscofe)')
     parser.add_argument('-scwrl_exe', metavar='path to scwrl', help='Path to Scwrl4 executable')
     parser.add_argument('-show_gui', metavar='True/False', help='Pop up and display a stand-alone GUI')
@@ -168,6 +170,7 @@ def add_rosetta_options(parser=None):
     rosetta_group.add_argument('-frags_3mers', help='Path to file with pre-existing Rosetta 3mer fragments')
     rosetta_group.add_argument('-frags_9mers', help='Path to file with pre-existing Rosetta 3mer fragments')
     rosetta_group.add_argument('-make_frags', metavar='True/False', help='set True to generate Rosetta 3mers and 9mers locally, False to import fragments')
+    rosetta_group.add_argument('-multimer_modelling', help='Generate multimeric models. Accepted values: {}'.format(MULTIMER_MODES))
     rosetta_group.add_argument('-nmodels', default=1000, metavar='number of models', type=int, help='number of models to make (default: 1000)')
     rosetta_group.add_argument('-nr', metavar='nr', help='Path to the NR non-redundant sequence database')
     rosetta_group.add_argument('-rg_reweight', metavar='radius of gyration reweight', type=float, help='Set the Rosetta -rg_reweight flag to specify the radius of gyration reweight.')
@@ -190,7 +193,7 @@ def add_ensembler_options(parser=None):
     # --------------------------------------------------------------------------------------------- #
     # sphinx-argparse ignores Mock imports and thus cannot find iotbx.pdb when generating the docs. #
     try:
-        from ample.ensembler.constants import ALLOWED_SIDE_CHAIN_TREATMENTS
+        from ample.ensembler.constants import ALLOWED_SIDE_CHAIN_TREATMENTS, SPICKER_RMSD, SPICKER_TM
         from ample.ensembler.truncation_util import TRUNCATION_METHODS
     except ImportError:
         allowed_side_chain_treatments = ['polyala', 'reliable', 'allatom', 'unmod']
@@ -200,17 +203,15 @@ def add_ensembler_options(parser=None):
         truncation_methods = [t.value for t in TRUNCATION_METHODS]
     # --------------------------------------------------------------------------------------------- #
     if parser is None:
-        import argparse
         parser = argparse.ArgumentParser()
     ensembler_group = parser.add_argument_group('Ensemble Options')
     ensembler_group.add_argument('-cluster_dir', help='Path to directory of pre-clustered models to import')
-    ensembler_group.add_argument('-cluster_method', help='How to cluster the models for ensembling (spicker|fast_protein_cluster')
+    ensembler_group.add_argument('-cluster_method', help='How to cluster the models for ensembling. Options: ' + '|'.join([SPICKER_RMSD, SPICKER_TM]))
     ensembler_group.add_argument('-ensembler_timeout', type=int, help='Time in seconds before timing out ensembling')
     ensembler_group.add_argument('-gesamt_exe', metavar='gesamt_exe', help='Path to the gesamt executable')
     ensembler_group.add_argument('-homologs', metavar='True/False', help='Generate ensembles from homologs models (requires -alignment_file)')
     ensembler_group.add_argument('-homolog_aligner', metavar='homolog_aligner', help='Program to use for structural alignment of homologs (gesamt|mustang)')
     ensembler_group.add_argument('-ensemble_max_models', help='Maximum number of models permitted in an ensemble')
-    ensembler_group.add_argument('-maxcluster_exe', help='Path to Maxcluster executable')
     ensembler_group.add_argument('-mustang_exe', metavar='mustang_exe', help='Path to the mustang executable')
     ensembler_group.add_argument('-num_clusters', type=int, help='The number of Spicker clusters of the original decoys that will be sampled [1]')
     ensembler_group.add_argument('-percent', metavar='percent_truncation', help='percent interval for truncation')
@@ -220,7 +221,7 @@ def add_ensembler_options(parser=None):
     ensembler_group.add_argument('-side_chain_treatments', type=str, nargs='+', help='The side chain treatments to use. Options: ' + '|'.join(allowed_side_chain_treatments))
     ensembler_group.add_argument('-spicker_exe', help='Path to spicker executable')
     ensembler_group.add_argument('-subcluster_radius_thresholds', type=float, nargs='+', help='The radii to use for subclustering the truncated ensembles')
-    ensembler_group.add_argument('-subcluster_program', help='Program for subclustering models [maxcluster]')
+    ensembler_group.add_argument('-subcluster_program', help='Program for subclustering models [gesamt]')
     ensembler_group.add_argument('-theseus_exe', metavar='Theseus exe (required)', help='Path to theseus executable')
     ensembler_group.add_argument('-thin_clusters', metavar='True/False', help='Create ensembles from 10 clusters with 1 + 3A subclustering and polyAlanine sidechains')
     ensembler_group.add_argument('-truncation_method', help='How to truncate the models for ensembling: ' + '|'.join(truncation_methods))
@@ -246,5 +247,4 @@ def process_command_line(args=None, contacts=True, modelling=True, mol_rep=True)
         add_mr_options(parser)
     if modelling:
         add_rosetta_options(parser)
-
-    return parser.parse_args(args)
+    return vars(parser.parse_args(args))

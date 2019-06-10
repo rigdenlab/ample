@@ -94,35 +94,6 @@ class Test_1(unittest.TestCase):
         os.unlink('lsqkab.matrix')
         return
 
-    @unittest.skipUnless(test_funcs.found_exe("maxcluster" + ample_util.EXE_EXT), "maxcluster exec missing")
-    def test_radius_maxcluster(self):
-        # Test we can reproduce the original thresholds
-        maxcluster_exe = ample_util.find_exe('maxcluster' + ample_util.EXE_EXT)
-        radius = 4
-        clusterer = subcluster.MaxClusterer(maxcluster_exe)
-        pdb_list = glob.glob(os.path.join(self.testfiles_dir, "models",'*.pdb'))
-        clusterer.generate_distance_matrix(pdb_list)
-        cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
-        ref=['4_S_00000003.pdb', '2_S_00000005.pdb', '2_S_00000001.pdb', '3_S_00000006.pdb',
-             '5_S_00000005.pdb', '3_S_00000003.pdb', '1_S_00000004.pdb', '4_S_00000005.pdb',
-             '3_S_00000004.pdb', '1_S_00000002.pdb', '5_S_00000004.pdb', '4_S_00000002.pdb', '1_S_00000005.pdb']
-        self.assertItemsEqual(ref,cluster_files1)
-        os.unlink('files.list')
-        os.unlink('maxcluster.log')
-
-    @unittest.skipUnless(test_funcs.found_exe("maxcluster" + ample_util.EXE_EXT), "maxcluster exec missing")
-    def test_cluster_score(self):
-        maxcluster_exe = ample_util.find_exe('maxcluster' + ample_util.EXE_EXT)
-        radius = 4
-        clusterer = subcluster.MaxClusterer(maxcluster_exe)
-        pdb_list = glob.glob(os.path.join(self.testfiles_dir, "models",'*.pdb'))
-
-        clusterer.generate_distance_matrix(pdb_list)
-        clusterer.cluster_by_radius(radius)
-        variance = clusterer.cluster_score
-        ref = 4.748
-        self.assertLessEqual(abs(ref-variance), 0.001, "Incorrect variance: {0} -> {1}".format(variance, ref))
-
 
 @unittest.skipUnless(test_funcs.found_exe("fast_protein_cluster" + ample_util.EXE_EXT), "fast_protein_cluster exec missing")
 class Test_2(unittest.TestCase):

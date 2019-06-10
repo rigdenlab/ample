@@ -24,8 +24,7 @@ argparse_util.add_ensembler_options(parser)
 # Get command-line arguments and see if we have a restart_pkl option as this
 # is how we pass in an existing ample dictionary when we are running the ensembling
 # as a standalone job on a cluster
-args = parser.parse_args()
-optd = vars(args)
+optd = vars(parser.parse_args())
 
 # Track restart as it determines if we need to unpack models
 restart = False
@@ -42,11 +41,11 @@ if 'restart_pkl' in optd and optd['restart_pkl']:
 else:
     # We're running purely from command-line arguments
     amopt = config_util.AMPLEConfigOptions()
-    amopt.populate(args)
+    amopt.populate(optd)
     optd = amopt.d
 
 # Start logging to the console
-logging_util.setup_console_logging()
+logger = logging_util.setup_console_logging()
 
 # Make sure we have models if in standalone mode
 if not restart and not ('models' in optd and optd['models'] and os.path.exists(optd['models'])):

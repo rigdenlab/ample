@@ -16,7 +16,6 @@ from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contact_util
 from ample.util import exit_util
-from ample.util import maxcluster
 from ample.util import mrbump_util
 from ample.util import mtz_util
 from ample.util import pdb_edit
@@ -84,7 +83,6 @@ def process_benchmark_options(optd):
             optd['tmscore_exe'] = ample_util.find_exe(optd['tmscore_exe'])
         except ample_util.FileNotFoundError:
             logger.warning("Cannot find TMScore executable: %s", optd['tmscore_exe'])
-            optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
             optd['have_tmscore'] = False
         else:
             optd['have_tmscore'] = True
@@ -104,10 +102,7 @@ def process_ensemble_options(optd):
                                                                                             [e.value for e in TRUNCATION_METHODS]))
         
     # Check we can find all the required programs
-    # Maxcluster handled differently as we may need to download the binary
-    if optd['subcluster_program'] == 'maxcluster':
-        optd['maxcluster_exe'] = maxcluster.find_maxcluster(optd)
-    elif optd['subcluster_program'] == 'gesamt':
+    if optd['subcluster_program'] == 'gesamt':
         if not optd['gesamt_exe']:
             optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
         try:
@@ -213,6 +208,11 @@ def process_options(optd):
         # Add in Owen's fixes
         optd['rg_reweight'] = 0.0
         optd['domain_termini_distance'] = optd['fasta_length'] * 1.5
+        pkey = ['PKEYWORD', 'TNCS', 'USE', 'OFF']
+        if isinstance(optd['mr_keys'], list):
+            optd['mr_keys'].append(pkey)
+        else:
+            optd['mr_keys'] = [pkey]
     process_ensemble_options(optd)
     process_mr_options(optd)
     process_benchmark_options(optd)
@@ -277,6 +277,8 @@ def process_modelling_options(optd):
                               "Please supply the models with the -models flag")
         optd['import_models'] = True
     elif optd['models']:
+        if not os.path.exists(optd['models']):
+            raise RuntimeError("Cannot find -models path: {}".format(optd['models']))
         optd['import_models'] = True
         optd['make_frags'] = False
         optd['make_models'] = False
@@ -366,8 +368,7 @@ def process_mr_options(optd):
             exit_util.exit_error(msg)
         else:
             optd['phaser_rms'] = phaser_rms
-            
-            
+
     # Disable all rebuilding if the resolution is too poor
     if optd['mtz_min_resolution'] >= mrbump_util.REBUILD_MAX_PERMITTED_RESOLUTION:
         logger.warn("!!! Disabling all rebuilding as maximum resolution of %f is too poor!!!".format(optd['mtz_min_resolution']))
@@ -378,7 +379,6 @@ def process_mr_options(optd):
         optd['refine_rebuild_arpwarp'] = False
         optd['refine_rebuild_buccaneer'] = False
         
-            
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
         if optd['mtz_min_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
@@ -403,6 +403,10 @@ def process_mr_options(optd):
     if optd['shelxe_rebuild']:
         optd['shelxe_rebuild_arpwarp'] = True
         optd['shelxe_rebuild_buccaneer'] = True
+        
+    # If shelxe_rebuild is set we need use_shelxe to be set
+    if (optd['shelxe_rebuild'] or optd['shelxe_rebuild_arpwarp']  or optd['shelxe_rebuild_buccaneer']) and not optd['use_shelxe']:
+        raise RuntimeError('shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.')
 
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
         auto_tracing_sh = None
@@ -426,10 +430,6 @@ def process_mr_options(optd):
         logger.info('Rebuilding in Bucaneer')
     else:
         logger.info('Not rebuilding in Bucaneer')
-
-    # If shelxe_rebuild is set we need use_shelxe to be set
-    if optd['shelxe_rebuild'] and not optd['use_shelxe']:
-        raise RuntimeError('shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.')
 
 
 def process_restart_options(optd):
@@ -455,7 +455,7 @@ def process_restart_options(optd):
        make_mr = True
        - create and run the mrbump jobs - see above
 
-       # BElow all same as default
+       # Below all same as default
     - if models and no ensembles
       - create ensembles from the models
 
@@ -518,9 +518,6 @@ def process_restart_options(optd):
             logger.info('Restarting from existing ensembles: %s', optd['ensembles'])
         elif 'models_dir' in optd and optd['models_dir'] and os.path.isdir(optd['models_dir']):
             logger.info('Restarting from existing models: %s', optd['models_dir'])
-            allsame = False if optd['homologs'] else True
-            if not pdb_edit.check_pdb_directory(optd['models_dir'], sequence=None, single=True, allsame=allsame):
-                raise RuntimeError("Error importing restart models: {0}".format(optd['models_dir']))
             optd['make_ensembles'] = True
         elif optd['frags_3mers'] and optd['frags_9mers']:
             logger.info('Restarting from existing fragments: %s, %s', optd['frags_3mers'], optd['frags_9mers'])
@@ -548,7 +545,7 @@ def restart_amoptd(optd):
     Description
     -----------
     For any new command-line options, we update the old dictionary with the new values
-    We then go through the new dictionary and set ant of the flags corresponding to the data we find:
+    We then go through the new dictionary and set any of the flags corresponding to the data we find:
 
     Notes
     -----

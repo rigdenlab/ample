@@ -37,7 +37,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         # self.subcluster_method='FLOATING_RADII'
         self.cluster_score_matrix = None
         self.subcluster_method = 'ORIGINAL'
-        self.subcluster_program = "maxcluster"
+        self.subcluster_program = "gesamt"
         self.subclustering_method = "radius"
         self.subcluster_radius_thresholds = SUBCLUSTER_RADIUS_THRESHOLDS
 
@@ -193,7 +193,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                                            num_clusters=num_clusters,
                                            cluster_dir=cluster_dir):
             if len(cluster) < 2:
-                logger.info("Cannot truncate cluster %d as < 2 models!", cluster.index)
+                logger.warning("Cannot truncate cluster %d as < 2 models!", cluster.index)
                 continue
             logger.info('Processing cluster: %d', cluster.index)
 
@@ -286,8 +286,6 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         """Return an instantiated subclusterer based on the given program"""
         if subcluster_program == 'gesamt':
             clusterer = subcluster.GesamtClusterer(self.gesamt_exe, nproc=self.nproc)
-        elif subcluster_program == 'maxcluster':
-            clusterer = subcluster.MaxClusterer(self.maxcluster_exe)
         elif subcluster_program == 'lsqkab':
             clusterer = subcluster.LsqkabClusterer(self.lsqkab_exe)
         else:

@@ -16,19 +16,6 @@ from ample.util import exit_util
 logger = logging.getLogger(__name__)
 
 
-"""
-Pipeline
-
-* models come in in 'models' arg
-* process and potentially refactor into 'processed_models'
-* may process those models again (e.g. NMR) - go again into 'processed_models'
-* models may be a cluster
-* models may go forward to ensembling
-* models go into MR
-
-"""
-
-
 class CheckModelsResult():
     def __init__(self):
         self.created_updated_models = False
@@ -77,6 +64,8 @@ def extract_and_validate_models(amoptd):
     models_arg = amoptd['models'] # command-line arg from user
     if models_arg is None:
         return
+    if not os.path.exists(models_arg):
+        raise RuntimeError("Cannot find models: {}".format(models_arg))
     models_dir_final = amoptd['models_dir'] # the directory where the models need to end up
     if models_dir_final is None:
         models_dir_final = os.path.join(amoptd['work_dir'], 'models')
@@ -116,6 +105,8 @@ def extract_and_validate_models(amoptd):
     elif isinstance(models_arg, list):
         # Assume all models are in the same directory
         models_dir_tmp = os.path.dirname(models_arg[0])
+    else:
+        raise RuntimeError("Dosdn't know how to process -models flag: {}".format(models_arg))
 
     if quark_models:
         # Null result - we extracted the models so assume are ok
@@ -175,7 +166,7 @@ def check_models(pdb_structures, results):
     num_structures = len(pdb_structures)
     if num_structures == 1:
         pdb = pdb_structures[0]
-        logger.debug("Processing a single input PDB file: {}".format(pdb))
+        logger.info("Processing a single input PDB file: {}".format(pdb))
         hierarchy = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
         num_models = len(hierarchy.models())
         results.num_models = num_models
@@ -203,7 +194,7 @@ def check_models(pdb_structures, results):
         # multiple pdb structures - get a list of chain_ids and sequences for all members
         multiple = [False] * num_structures # tracks if there are multiple chains in the models
         chains_match_across_pdbs = [False] * num_structures # do chains with the same index have the same sequence across pdbs?
-        logger.debug("Processing {} input PDB files".format(num_structures))
+        logger.info("Processing {} input PDB files".format(num_structures))
         for idx_pdb, pdb in enumerate(pdb_structures):
             h = iotbx.pdb.pdb_input(pdb).construct_hierarchy()
             if len(h.models()) > 1:
@@ -250,12 +241,12 @@ def check_models(pdb_structures, results):
         # We now have multiple structures, each with one chain - make sure they all have a chain.id
         chains_updated = pdb_edit.add_missing_single_chain_ids(hierarchies)
         if chains_updated:
-            logger.critical("Added missing chain IDs to models")
+            logger.info("Added missing chain IDs to models")
         updated = chains_updated | updated # see if anything has been updated
 
     results.num_structures = num_structures
     if updated:
-        logger.critical("Updated models have been created to ensure their suitability for running with AMPLE.")
+        logger.warning("Updated models have been created to ensure their suitability for running with AMPLE.")
         # write out new files
         results.created_updated_models = True
         if not os.path.isdir(results.models_dir):

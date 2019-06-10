@@ -4,7 +4,7 @@ import shutil
 import unittest
 
 from ample import constants
-from ample.modelling import rosetta_model
+from ample.modelling import rosetta_model, multimer_definitions
 
 class Test(unittest.TestCase):
 
@@ -13,6 +13,38 @@ class Test(unittest.TestCase):
         cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
         cls.ample_share = constants.SHARE_DIR
         cls.testfiles_dir = os.path.join(cls.ample_share,'testfiles')
+
+
+    def testMultimerConstraints(self):
+        """Test generation of multimer constraints"""
+
+        m = rosetta_model.RosettaModel()
+        m.multimer_modelling = multimer_definitions.TRIMER
+        m.work_dir = '.'
+        m.sequence_length = 4
+        cfile = m.create_multimer_constraints_file()
+        
+        ref = """AtomPair CA    1 CA    4 FLAT_HARMONIC 6.00 3.00 5.00
+AtomPair CA   1A CA   1B FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   2A CA   2B FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   3A CA   3B FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   4A CA   4B FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA    1 CA    4 FLAT_HARMONIC 6.00 3.00 5.00
+AtomPair CA   1A CA   1C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   2A CA   2C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   3A CA   3C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   4A CA   4C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA    1 CA    4 FLAT_HARMONIC 6.00 3.00 5.00
+AtomPair CA   1B CA   1C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   2B CA   2C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   3B CA   3C FLAT_HARMONIC 10.00 3.00 5.00
+AtomPair CA   4B CA   4C FLAT_HARMONIC 10.00 3.00 5.00
+"""
+        with open(cfile) as f:
+            fstr = f.read()
+        #self.assertEquals(fstr, ref, "Contents of constraints files don't match: {}".format(cfile))
+        self.assertEquals(fstr, ref)
+        os.unlink(cfile)
 
     def XtestMakeFragments(self):
         """See we can create fragments"""

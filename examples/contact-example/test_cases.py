@@ -99,7 +99,7 @@ if not sys.platform.startswith('win'):
             nmodels = len(glob.glob(os.path.join(self.AMPLE_DICT['models_dir'], '*pdb')))
             self.assertEqual(nmodels, 30, "Only {0} models produced".format(nmodels))
             nmodels_sub = len(self.AMPLE_DICT['processed_models'])
-            self.assertEqual(nmodels_sub, 15, "Only {0} models produced".format(nmodels))
+            self.assertEqual(nmodels_sub, 15, "{0} models selected".format(nmodels_sub))
 
     TEST_DICT['rosetta_contacts_subselect'] = {
         'args': args_rosetta_contacts_subselect,

@@ -139,7 +139,6 @@ class Test(unittest.TestCase):
         f.write("blast_dir : blast_dir" + os.linesep)
         f.write("fast_protein_cluster_exe : foo.exe" + os.linesep)
         f.write("gesamt_exe : gesamt.exe" + os.linesep)
-        f.write("maxcluster_exe : maxcluster.exe" + os.linesep)
         f.write("mustang_exe : mustang.exe" + os.linesep)
         f.write("rosetta_dir : rosetta_directory" + os.linesep)
         f.write("rosetta_fragments_exe : bar.exe" + os.linesep)
@@ -173,7 +172,6 @@ class Test(unittest.TestCase):
                     'blast_dir' : os.path.abspath('blast_dir'),
                     'fast_protein_cluster_exe' : os.path.abspath('foo.exe'),
                     'gesamt_exe' : os.path.abspath('gesamt.exe'),
-                    'maxcluster_exe' : os.path.abspath('maxcluster.exe'),
                     'mustang_exe' : os.path.abspath('mustang.exe'),
                     'rosetta_dir' : os.path.abspath('rosetta_directory'),
                     'rosetta_fragments_exe' : os.path.abspath('bar.exe'),

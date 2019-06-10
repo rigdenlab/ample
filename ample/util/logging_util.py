@@ -1,11 +1,51 @@
-import logging
+from enum import Enum
+import json
+import logging.config
+import os
 import sys
 
+from ample.constants import AMPLE_LOGGER_CONFIG
+
+
+class LogColors(Enum):
+    """Color container for log messages"""
+    CRITICAL = 31
+    DEBUG = 34
+    DEFAULT = 0
+    ERROR = 31
+    WARNING = 33
+ 
+ 
+class LogColorFormatter(logging.Formatter):
+    """Formatter for log messages"""
+    def format(self, record):   
+        if record.levelname in LogColors.__members__:
+            prefix = '\033[1;{}m'.format(LogColors[record.levelname].value)
+            postfix = '\033[{}m'.format(LogColors["DEFAULT"].value)
+            record.msg = os.linesep.join([prefix + msg + postfix for msg in str(record.msg).splitlines()])
+        return logging.Formatter.format(self, record)
+ 
+ 
+def setup_logging(argso):
+    """Read JSON config for logger and return root logger
+    
+    Also sets the path to the AMPLE logfile in the dictionary (required for pyrvapi)"""
+    if not os.path.isfile(AMPLE_LOGGER_CONFIG):
+        raise RuntimeError("Cannot find AMPLE_LOGGER_CONFIG file: {}".format(AMPLE_LOGGER_CONFIG))
+    with open(AMPLE_LOGGER_CONFIG, 'rt') as f:
+        config = json.load(f)
+    logging.config.dictConfig(config)
+    try:
+        argso['ample_log'] = os.path.abspath(config['handlers']['file_handler']['filename'])
+    except KeyError:
+        argso['ample_log'] = None
+    return logging.getLogger()   
+
+
 def setup_console_logging(level=logging.INFO,
-                          formatstr='%(message)s\n' # Always add a blank line after every print
-                          ):
+                          formatstr='%(message)s\n'):
     """
-    Set up logging to the console for the root logger.
+    Set up logging to the console - required for the individual modules.
     
     Parameters
     ----------
@@ -30,14 +70,13 @@ def setup_console_logging(level=logging.INFO,
     formatter = logging.Formatter(formatstr) 
     cl.setFormatter(formatter)
     logger.addHandler(cl)
-    
     return logger
-    
+
 def setup_file_logging(logfile,
                        level=logging.DEBUG,
                        formatstr='%(asctime)s - %(name)s - %(levelname)s - %(message)s'):
     """
-    Set up logging to a file for the root logger.
+    Set up logging to a file - required for the individual modules.
     
     Parameters
     ----------
@@ -59,5 +98,4 @@ def setup_file_logging(logfile,
     formatter = logging.Formatter(formatstr)
     fl.setFormatter(formatter)
     logger.addHandler(fl)
-    
     return logger

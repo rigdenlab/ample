@@ -295,7 +295,7 @@ def is_file(fpath):
            os.access(fpath, os.R_OK) and os.stat(fpath).st_size > 0
 
 
-def make_workdir(run_dir, ccp4i2=False):
+def make_workdir(run_dir, ccp4i2=False, MAX_WORKDIRS=100):
     """Make a work directory rooted at run_dir and return its path
 
     Parameters
@@ -317,9 +317,11 @@ def make_workdir(run_dir, ccp4i2=False):
         run_inc = 0
         while True:
             work_dir = os.path.join(run_dir, AMPLEDIR + str(run_inc))
-            if not os.path.exists(work_dir): break
+            if not os.path.exists(work_dir):
+                break
             run_inc += 1
-            if run_inc > 100: raise RuntimeError("Too many work directories! {0}".format(work_dir)) # To stop endless while loops...
+            if run_inc > MAX_WORKDIRS:
+                raise RuntimeError("Too many work directories! {0}".format(work_dir))
     if os.path.exists(work_dir):
         raise RuntimeError("There is an existing AMPLE work directory: {0}\n"
                            "Please delete/move it aside.".format(work_dir))

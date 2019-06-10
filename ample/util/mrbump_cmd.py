@@ -75,18 +75,16 @@ def mrbump_keyword_file(odict, fixed_iden=0.6):
     mrs += 'JOBID {0}_mrbump\n'.format(odict['name'])
     mrs += 'MRPROGRAM {0}\n'.format(" ".join(odict['mrbump_programs']))
     mrs += 'LOCALFILE {0} CHAIN ALL RMS {1}'.format((odict['ensemble_pdb']), odict['phaser_rms'])
-    if 'ncopies' in odict and odict['ncopies'] > 0: mrs += ' COPIES {0}'.format(odict['ncopies'])
+    if 'ncopies' in odict and odict['ncopies'] > 0:
+        mrs += ' COPIES {0}'.format(odict['ncopies'])
     mrs += '\n'
-    #
     # Don't do any of the searches as we are providing a local file
-    #
     mrs += 'SCOPSEARCH False\n'
     mrs += 'PQSSEARCH False\n'
     mrs += 'SSMSEARCH False\n'
     mrs += 'DOFASTA False\n'
     mrs += 'DOPHMMER False\n'
     mrs += 'DOHHPRED False\n'
-    #
     mrs += 'FAST False\n'
     mrs += 'MDLD False\n'
     mrs += 'MDLC False\n'
@@ -112,15 +110,13 @@ def mrbump_keyword_file(odict, fixed_iden=0.6):
     mrs += 'USEENSEM False\n'
     mrs += 'CLEAN False\n'
     mrs += 'DEBUG {0}\n'.format(odict['debug'])
-    
-    #
-    # Optional extras
-    #
     if odict['shelxe_rebuild_arpwarp'] or odict['shelxe_rebuild_buccaneer']:
         # Rebuild SHELXE trace with both Buccaneer and ArpWarp
         mrs += 'SXREBUILD True\n'
-        if odict['shelxe_rebuild_buccaneer']: mrs += 'SXRBUCC True\n'
-        if odict['shelxe_rebuild_arpwarp']: mrs += 'SXRARPW True\n'
+        if odict['shelxe_rebuild_buccaneer']:
+            mrs += 'SXRBUCC True\n'
+        if odict['shelxe_rebuild_arpwarp']:
+            mrs += 'SXRARPW True\n'
     if odict['nmasu'] > 0:
         mrs += 'NMASU  {0}\n'.format(odict['nmasu'])
     if odict['domain_all_chains_pdb']:
@@ -131,10 +127,10 @@ def mrbump_keyword_file(odict, fixed_iden=0.6):
         mrs += 'PKEY KILL TIME {0}\n'.format(odict['phaser_kill'])
     if odict['mr_sg_all']:
         mrs += 'PKEY SGALTERNATIVE SELECT ALL\n'
-    
     # Extra keywords
     # This assumes everything in mr_keys is a list of [ KEYWORD, VALUE0, VALUE1, ...]
     if odict['mr_keys']:
-        for l in odict['mr_keys']: mrs += "  ".join(l) + "\n"
+        for l in odict['mr_keys']:
+            mrs += "  ".join(l) + "\n"
     mrs += 'END\n'
     return mrs

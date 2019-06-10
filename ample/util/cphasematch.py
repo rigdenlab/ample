@@ -12,7 +12,7 @@ from ample.util import pdb_edit
 from ample.util import ample_util
 from ample.util import mtz_util
 
-_logger = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 def _basis_str(origin_shift):
     """Return the string to get the sgtbx basis_op for the given origin shift"""
@@ -343,7 +343,7 @@ if __name__ == "__main__":
         f_label, sigf_label = args.f_label, args.sigf_label
     else:
         f_label, sigf_label, _ = mtz_util.get_labels(args.native_mtz)
-    _logger.info("Using F, SIGF labels from mtz file: {0}, {1} ".format(f_label, sigf_label))
+    logger.info("Using F, SIGF labels from mtz file: {0}, {1} ".format(f_label, sigf_label))
 
     if args.native_pdb:
         before_origin, after_origin, change_of_hand, origin_shift = calc_phase_error_pdb(
