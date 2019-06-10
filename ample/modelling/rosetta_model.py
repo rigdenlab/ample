@@ -327,7 +327,7 @@ class RosettaModel(object):
         if self.num_chains and self.num_chains < len(chaind):
             # for now we just assume we want continguous ones
             chains = list(chaind.keys())[:self.num_chains]
-            logger.info("Selecting chains %s from multimer models" % chains)
+            logger.info("Selecting chains %s from multimer models", chains)
         models = []
         for i, pdbin in enumerate(modelsin):
             pdbout = os.path.join(self.models_dir, "multimermodel_{}.pdb".format(i))
@@ -571,7 +571,7 @@ class RosettaModel(object):
             elif self._chk36(self.rosetta_dir):
                 version = 3.6
             else:
-                logger.debug("Cannot determine rosetta version in directory: %s" % self.rosetta_dir)
+                logger.debug("Cannot determine rosetta version in directory: %s", self.rosetta_dir)
                 return False
         logger.info('Rosetta version is: {0}'.format(version))
         return version
@@ -753,7 +753,7 @@ class RosettaModel(object):
         if not self.nmr_process_ntimes:
             self.nmr_process_ntimes = 1000 / num_nmr_models
         num_models = self.nmr_process_ntimes * num_nmr_models
-        logger.info('Processing each model %d times. %d models will be made' % self.nmr_process_ntimes, num_models)
+        logger.info('Processing each model %d times. %d models will be made', self.nmr_process_ntimes, num_models)
         
         # Idealize all the nmr models to have standard bond lengths, angles etc
         id_pdbs = self.idealize_models(models)
