@@ -445,28 +445,25 @@ class Ample(object):
         optd['ccp4_version'] = ample_util.CCP4.version.version
         logger.info(reference_manager.header)
         logger.info("AMPLE version: %s", str(version.__version__))
-        logger.info("Running with CCP4 version: %s from directory: %s", ample_util.CCP4.version, ample_util.CCP4.root)
+        logger.info("Using CCP4 version: %s from directory: %s", ample_util.CCP4.version, ample_util.CCP4.root)
         logger.info("Running on host: %s", platform.node())
         logger.info("Running on platform: %s", platform.platform())
+        logger.info('Running on %d processors', optd['nproc'])
         logger.info("Job started at: %s", time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()))
         logger.info("Invoked with command-line:\n%s\n", " ".join(sys.argv))
         logger.info("Running in directory: %s\n", optd['work_dir'])
-
         if pyrvapi_results.pyrvapi:
             self.ample_output = pyrvapi_results.AmpleOutput(optd)
             self.ample_output.display_results(optd)
-
         options_processor.check_mandatory_options(optd)
         optd = options_processor.process_restart_options(optd)
         if not optd['restart_pkl']:
             options_processor.process_options(optd)
-
         if optd['dry_run']:
             logger.info('Dry run finished checking options - cleaning up...')
             os.chdir(optd['run_dir'])
             shutil.rmtree(optd['work_dir'])
             sys.exit(0)
-            
         logger.info('All needed programs are found, continuing...')
         return optd
 

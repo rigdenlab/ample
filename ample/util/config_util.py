@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 # otherwise we cannot manage interplay between
 # ConfigParser and AMPLE settings dictionary.
 # Some default non-dynamic parts are stored below to avoid errors
-
 _SECTIONS_REFERENCE = {"AMPLE_info": ["ample_version",
                                       "ccp4_version",
                                       "cmdline_flags"],
@@ -105,6 +104,7 @@ _SECTIONS_REFERENCE = {"AMPLE_info": ["ample_version",
                        "Unspecified": [],
                        }
 
+
 class DebugDict(dict):
     """A Dictionary class that prints when watched items are set or accessed"""
     def __init__(self, *args, **kwargs):
@@ -127,6 +127,7 @@ class DebugDict(dict):
             logger.info("AMOPT SET {0}['{1}'] = {2}".format(dict.get(self, 'name_label'), key, val))
             logger.info("AMOPT STACK:\n{0}".format(os.linesep.join(traceback.format_list(traceback.extract_stack())[:-1])))
         dict.__setitem__(self, key, val)
+
 
 class AMPLEConfigOptions(object):
 
@@ -219,12 +220,9 @@ class AMPLEConfigOptions(object):
         options_processor
 
         """
-
         self.d['ample_version'] = version.__version__
-
         if "rcdir" in self.d and not self.d["rcdir"]:
             self.d["rcdir"] = os.path.join(os.path.expanduser("~"), ".ample")
-
         # Set full file paths
         for k, v in self.d.iteritems():
             if k in _SECTIONS_REFERENCE["Files"] and v:
@@ -248,7 +246,6 @@ class AMPLEConfigOptions(object):
             self._preset_options('thin_clusters')
         if self.d['webserver_uri']:
             self._preset_options('webserver_uri')
-
         return
 
     def _preset_options(self, mode):
@@ -277,12 +274,9 @@ class AMPLEConfigOptions(object):
         # We need to make sure that the keys aren't converted to lower case on reading
         config.optionxform = str
         config.read(config_file)
-
         for section in config.sections():
-
             if not section in _SECTIONS_REFERENCE:
                 _SECTIONS_REFERENCE[section] = []
-
             # Basic switch statement to determine the type of the variable
             for k, v in config.items(section):
                 if v.lower() == "none":
@@ -318,25 +312,14 @@ class AMPLEConfigOptions(object):
     def _read_cmdline_opts(self, cmdline_opts):
         tmpv = None
         cmdline_flags = []
-
         for k, v in cmdline_opts.iteritems():
             if v is not None:
                 cmdline_flags.append(k)
-            if isinstance(v, str):
-                if v.lower() == "true":
-                    v = True
-                elif v.lower() == "false":
-                    v = False
-                elif v.lower() == "none":
-                    v = None
-
             if k not in self.d:
                 self.d[k] = v
             elif v != None:
-                logger.debug(
-                    "Cmdline setting {0}: {1} => {2}".format(k, self.d[k], v))
+                logger.debug("Cmdline changing {0}: {1} => {2}".format(k, self.d[k], v))
                 self.d[k] = v
-
         self.d['cmdline_flags'] = cmdline_flags
         return
 
@@ -398,5 +381,4 @@ class AMPLEConfigOptions(object):
                 config_parser.set(section, "#" + option, str(self.d[option]))
             else:
                 config_parser.set(section, option, str(self.d[option]))
-
         return

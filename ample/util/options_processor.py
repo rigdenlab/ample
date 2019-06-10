@@ -18,7 +18,6 @@ from ample.util import contact_util
 from ample.util import exit_util
 from ample.util import mrbump_util
 from ample.util import mtz_util
-from ample.util import pdb_edit
 from ample.util import sequence_util
 
 logger = logging.getLogger(__name__)
@@ -68,6 +67,7 @@ def check_mandatory_options(optd):
 
     return
 
+
 def process_benchmark_options(optd):
     # Benchmark Mode
     if optd['native_pdb'] or optd['benchmark_mode']:
@@ -86,7 +86,8 @@ def process_benchmark_options(optd):
             optd['have_tmscore'] = False
         else:
             optd['have_tmscore'] = True
-            
+
+      
 def process_ensemble_options(optd):
     from ample.ensembler.truncation_util import TRUNCATION_METHODS
     if optd['single_model_mode'] and optd['truncation_scorefile'] and optd['truncation_scorefile_header']:
@@ -217,8 +218,6 @@ def process_options(optd):
     process_mr_options(optd)
     process_benchmark_options(optd)
 
-    logger.info('Running on %d processors', optd['nproc'])
-    # cluster queueing
     if optd['submit_qtype']:
         optd['submit_qtype'] = optd['submit_qtype'].upper()
     if optd['submit_cluster'] and not optd['submit_qtype']:
@@ -230,6 +229,7 @@ def process_options(optd):
     if optd['purge'] > 0:
         logger.info('*** Purge mode level %d specified - intermediate files will be deleted ***', optd['purge'])
     return
+
 
 def process_modelling_options(optd):
     """ Modelling and ensemble options"""
