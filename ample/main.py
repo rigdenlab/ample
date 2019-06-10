@@ -471,7 +471,11 @@ class Ample(object):
         return optd
 
     def setup_workdir(self, argso):
-        # Make a work directory - this way all output goes into this directory
+        """Make a work directory - this way all output goes into this directory.
+        
+        This is done before the loggers has been set up so is the only place we
+        should ever use a print statement.
+        """
         if argso['work_dir'] and not argso['restart_pkl']:
             print('Making a named work directory: %s', argso['work_dir'])
             try:
@@ -479,7 +483,6 @@ class Ample(object):
             except Exception as e:
                 msg = "Cannot create work_dir {0}: {1}".format(argso['work_dir'], e)
                 exit_util.exit_error(msg, sys.exc_info()[2])
-
         if not argso['work_dir']:
             if not os.path.exists(argso['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(argso['run_dir'])

@@ -117,8 +117,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if str(job) in self.runningQueueList:
                     newRunningList.append(job)
             if len(runningList) > len(newRunningList):
-                logger.info("Queue Monitor: %d out of %d jobs remaining in cluster queue..." %  \
-                            (len(newRunningList),len(self.qList)))
+                logger.info("Queue Monitor: %d out of %d jobs remaining in cluster queue...", \
+                            len(newRunningList),len(self.qList))
             if len(newRunningList) == 0:
                 logger.info("Queue Monitor: All jobs complete!")
             runningList = newRunningList
