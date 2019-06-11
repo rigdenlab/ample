@@ -941,57 +941,54 @@ def renumber_residues_gaps(pdbin, pdbout, gaps, start=1):
 
 
 def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, tokeep_idx=None):
-
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
     hierarchy = pdbf.file_object.construct_hierarchy()
-
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
-
+    
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         logger.debug("pdb %s has > 1 model or chain - only first model/chain will be kept", pdbin)
 
-    if len(hierarchy.models()) > 1:
-        for i, m in enumerate(hierarchy.models()):
-            if i != 0: hierarchy.remove_model(m)
-    model = hierarchy.models()[0]
-
-    if len(model.chains()) > 1:
-        for i, c in enumerate(model.chains()):
-            if i != 0: model.remove_chain(c)
-    chain = model.chains()[0]
-
-    idx = -1
-    for residue_group in chain.residue_groups():
-        # We ignore hetatms when indexing as we are concerned with residue indexes
-        if delete_idx or tokeep_idx:
-            if any([atom.hetero for atom in residue_group.atoms()]): continue
-        idx += 1
-
-        remove = False
-        if delete:
-            if residue_group.resseq_as_int() in delete: remove = True
-        elif delete_idx:
-            if idx in delete: remove = True
-        elif tokeep:
-            if residue_group.resseq_as_int() not in tokeep: remove = True
-        elif tokeep_idx:
-            if idx not in tokeep_idx: remove = True
-
-        if remove:
-            chain.remove_residue_group(residue_group)
-
+    hierarchy = _select_residues(hierarchy, delete=delete, tokeep=tokeep, delete_idx=delete_idx, tokeep_idx=tokeep_idx)
     #hierarchy.write_pdb_file(pdbout,anisou=False)
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:\n")
         f.write("REMARK   {0}\n".format(pdbin))
         if (crystal_symmetry is not None):
             f.write(
-                iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry, write_scale_records=True) +
-                "\n")
+                iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
+                                                          write_scale_records=True) + "\n")
         f.write(hierarchy.as_pdb_string(anisou=False))
     return
 
+def _select_residues(hierarchy, delete=None, tokeep=None, delete_idx=None, tokeep_idx=None):
+    if len(hierarchy.models()) > 1:
+        for i, m in enumerate(hierarchy.models()):
+            if i != 0:
+                hierarchy.remove_model(m)
+    model = hierarchy.models()[0]
+    if len(model.chains()) > 1:
+        for i, c in enumerate(model.chains()):
+            if i != 0: model.remove_chain(c)
+    chain = model.chains()[0]
+    idx = -1
+    for residue_group in chain.residue_groups():
+        # We ignore hetatms when indexing as we are concerned with residue indexes
+        if (delete_idx or tokeep_idx) and any([atom.hetero for atom in residue_group.atoms()]):
+                continue
+        idx += 1
+        remove = False
+        if delete and residue_group.resseq_as_int() in delete:
+            remove = True
+        elif delete_idx and idx in delete:
+            remove = True
+        elif tokeep and residue_group.resseq_as_int() not in tokeep:
+            remove = True
+        elif tokeep_idx and idx not in tokeep_idx:
+            remove = True
+        if remove:
+            chain.remove_residue_group(residue_group)
+    return hierarchy
 
 def sequence(pdbin):
     return _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())

@@ -161,7 +161,6 @@ class RosettaModel(object):
         self.restraints_weight = None
         self.disulfide_constraints_file = None
     
-        # NMR options
         self.nmr_remodel = None
         self.nmr_process_ntimes = None
         self.nmr_alignment_file = None
@@ -238,10 +237,10 @@ class RosettaModel(object):
         if self.improve_template:
             cmd += [
                 '-in:file:native', self.improve_template,
-                '-abinitio:steal_3mers', 'True',
-                '-abinitio:steal9mers', 'True',
-                '-abinitio:start_native', 'True',
-                '-templates:force_native_topology', 'True'
+                '-abinitio:steal_3mers', 'true',
+                '-abinitio:steal9mers', 'true',
+                '-abinitio:start_native', 'true',
+                '-templates:force_native_topology', 'true'
             ]
         return cmd
 
@@ -250,7 +249,7 @@ class RosettaModel(object):
 
         Parameters
         ----------
-        processed_models : list
+        processed_models : list, optional
            A list of pdb models that should have been checked for suitability.
            NB - currently only required by NMR remodelling
  
@@ -328,7 +327,7 @@ class RosettaModel(object):
         if self.num_chains and self.num_chains < len(chaind):
             # for now we just assume we want continguous ones
             chains = list(chaind.keys())[:self.num_chains]
-            logger.info("Selecting chains {} from multimer models".format(chains))
+            logger.info("Selecting chains %s from multimer models", chains)
         models = []
         for i, pdbin in enumerate(modelsin):
             pdbout = os.path.join(self.models_dir, "multimermodel_{}.pdb".format(i))
@@ -570,9 +569,9 @@ class RosettaModel(object):
             # elif re.search("rosetta_\d{4}\.\d{2}\.\d{5}_bundle",dirname):
             # Ignore as people change the directory names - just check for the presence of the folders:
             elif self._chk36(self.rosetta_dir):
-                version=3.6
+                version = 3.6
             else:
-                logger.debug("Cannot determine rosetta version in directory: {0}".format(self.rosetta_dir))
+                logger.debug("Cannot determine rosetta version in directory: %s", self.rosetta_dir)
                 return False
         logger.info('Rosetta version is: {0}'.format(version))
         return version
@@ -748,13 +747,13 @@ class RosettaModel(object):
     def do_nmr_remodel(self, models):
         if self.mnr_remodel_fasta and not os.path.isfile(self.mnr_remodel_fasta):
                 raise RuntimeError("Cannot find remodel_fasta: {0}".format(self.mnr_remodel_fasta))
-        if self.nmr_process_ntimes:
-            assert isinstance(self.nmr_process_ntimes, int), "ntimes is not an int: {0}".format(self.nmr_process_ntimes)
+        if self.nmr_process_ntimes and not isinstance(self.nmr_process_ntimes, int):
+                raise RuntimeError("ntimes is not an int: {0}".format(self.nmr_process_ntimes))
         num_nmr_models = len(models)
         if not self.nmr_process_ntimes:
             self.nmr_process_ntimes = 1000 / num_nmr_models
         num_models = self.nmr_process_ntimes * num_nmr_models
-        logger.info('Processing each model {0} times. {0} models will be made'.format(self.nmr_process_ntimes, num_models))
+        logger.info('Processing each model %d times. %d models will be made', self.nmr_process_ntimes, num_models)
         
         # Idealize all the nmr models to have standard bond lengths, angles etc
         id_pdbs = self.idealize_models(models)
@@ -896,7 +895,7 @@ class RosettaModel(object):
             w.write(restraint + os.linesep)
         return restraints_file
 
-    def set_from_dict(self, optd ):
+    def set_from_dict(self, optd):
         """Set the values from a dictionary"""
 
         # Common variables

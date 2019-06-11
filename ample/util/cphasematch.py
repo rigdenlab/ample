@@ -343,7 +343,7 @@ if __name__ == "__main__":
         f_label, sigf_label = args.f_label, args.sigf_label
     else:
         f_label, sigf_label, _ = mtz_util.get_labels(args.native_mtz)
-    logger.info("Using F, SIGF labels from mtz file: {0}, {1} ".format(f_label, sigf_label))
+    logger.info("Using F, SIGF labels from mtz file: %s, %s", f_label, sigf_label)
 
     if args.native_pdb:
         before_origin, after_origin, change_of_hand, origin_shift = calc_phase_error_pdb(

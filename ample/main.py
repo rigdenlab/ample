@@ -58,7 +58,7 @@ class Ample(object):
         for the program - required for testing.
         """
         argso = argparse_util.process_command_line(args=args)
-        # SWork directory and loggers need to be setup before we do anything else
+        # Work directory and loggers need to be setup before we do anything else
         self.setup_workdir(argso)
         global logger
         logger = logging_util.setup_logging(argso)
@@ -68,16 +68,9 @@ class Ample(object):
         amopt.populate(argso)
         amopt.d = self.setup(amopt.d)
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d)
-
-        # Display the parameters used
-        logger.debug(amopt.prettify_parameters())
-
+        logger.debug(amopt.prettify_parameters()) # Display the parameters used
         amopt.write_config_file()
-        #######################################################
-        # SCRIPT PROPER STARTS HERE
         time_start = time.time()
-
-        # Create function for monitoring jobs - static function decorator?
         if self.ample_output:
             def monitor():
                 return self.ample_output.display_results(amopt.d)
@@ -88,7 +81,6 @@ class Ample(object):
         model_results = process_models.extract_and_validate_models(amopt.d)
         if model_results:
             process_models.handle_model_import(amopt.d, model_results)
-        
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d)
@@ -445,50 +437,47 @@ class Ample(object):
         optd['ccp4_version'] = ample_util.CCP4.version.version
         logger.info(reference_manager.header)
         logger.info("AMPLE version: %s", str(version.__version__))
-        logger.info("Running with CCP4 version: %s from directory: %s", ample_util.CCP4.version, ample_util.CCP4.root)
+        logger.info("Using CCP4 version: %s from directory: %s", ample_util.CCP4.version, ample_util.CCP4.root)
         logger.info("Running on host: %s", platform.node())
         logger.info("Running on platform: %s", platform.platform())
+        logger.info('Running on %d processors', optd['nproc'])
         logger.info("Job started at: %s", time.strftime("%a, %d %b %Y %H:%M:%S", time.gmtime()))
         logger.info("Invoked with command-line:\n%s\n", " ".join(sys.argv))
         logger.info("Running in directory: %s\n", optd['work_dir'])
-
         if pyrvapi_results.pyrvapi:
             self.ample_output = pyrvapi_results.AmpleOutput(optd)
             self.ample_output.display_results(optd)
-
         options_processor.check_mandatory_options(optd)
         optd = options_processor.process_restart_options(optd)
         if not optd['restart_pkl']:
             options_processor.process_options(optd)
-
         if optd['dry_run']:
             logger.info('Dry run finished checking options - cleaning up...')
             os.chdir(optd['run_dir'])
             shutil.rmtree(optd['work_dir'])
             sys.exit(0)
-            
         logger.info('All needed programs are found, continuing...')
         return optd
 
     def setup_workdir(self, argso):
-        # Make a work directory - this way all output goes into this directory
+        """Make a work directory - this way all output goes into this directory.
+        
+        This is done before the loggers has been set up so no logging is possible.
+        """
         if argso['work_dir'] and not argso['restart_pkl']:
-            print('Making a named work directory: %s', argso['work_dir'])
             try:
                 os.mkdir(argso['work_dir'])
             except Exception as e:
                 msg = "Cannot create work_dir {0}: {1}".format(argso['work_dir'], e)
                 exit_util.exit_error(msg, sys.exc_info()[2])
-
         if not argso['work_dir']:
             if not os.path.exists(argso['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(argso['run_dir'])
                 exit_util.exit_error(msg, sys.exc_info()[2])
-            if bool(argso['rvapi_document']):
+            if argso['rvapi_document']:
                 # With JSCOFE we run in the run directory
                 argso['work_dir'] = argso['run_dir']
             else:
-                print('Making a run directory: ' 'checking for previous runs...')
                 argso['work_dir'] = ample_util.make_workdir(argso['run_dir'],
                                                             ccp4i2=bool(argso['ccp4i2_xml']))
         os.chdir(argso['work_dir'])

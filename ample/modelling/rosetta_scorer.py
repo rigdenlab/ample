@@ -8,7 +8,7 @@ class RosettaScoreData(object):
         self.maxsub = None
         self.description = None
         self.model = None
-        return
+
 
 class RosettaScoreParser(object):
     
@@ -29,9 +29,7 @@ class RosettaScoreParser(object):
             raise RuntimeError("Cannot find ROSETTA score file: {0}".format(score_file))
         self.parseFile(score_file)
         
-    def parseFile(self, score_file):
-        
-        print("Parsing file ", score_file)
+    def parse_file(self, score_file):
         idxScore=None
         idxRms=None
         idxMaxsub=None
@@ -97,10 +95,10 @@ class RosettaScoreParser(object):
         
         return
         
-    def maxsubSorted(self, reverse=True):
+    def maxsub_sorted(self, reverse=True):
         return sorted(self.data, key=lambda data: data.maxsub, reverse=reverse)
      
-    def rmsSorted(self, reverse=True):
+    def rms_sorted(self, reverse=True):
         return sorted(self.data, key=lambda data: data.rms, reverse=reverse)
     
     def rms(self, name):
