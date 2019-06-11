@@ -58,7 +58,7 @@ class Ample(object):
         for the program - required for testing.
         """
         argso = argparse_util.process_command_line(args=args)
-        # SWork directory and loggers need to be setup before we do anything else
+        # Work directory and loggers need to be setup before we do anything else
         self.setup_workdir(argso)
         global logger
         logger = logging_util.setup_logging(argso)
@@ -68,16 +68,9 @@ class Ample(object):
         amopt.populate(argso)
         amopt.d = self.setup(amopt.d)
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d)
-
-        # Display the parameters used
-        logger.debug(amopt.prettify_parameters())
-
+        logger.debug(amopt.prettify_parameters()) # Display the parameters used
         amopt.write_config_file()
-        #######################################################
-        # SCRIPT PROPER STARTS HERE
         time_start = time.time()
-
-        # Create function for monitoring jobs - static function decorator?
         if self.ample_output:
             def monitor():
                 return self.ample_output.display_results(amopt.d)
@@ -88,7 +81,6 @@ class Ample(object):
         model_results = process_models.extract_and_validate_models(amopt.d)
         if model_results:
             process_models.handle_model_import(amopt.d, model_results)
-        
         if amopt.d['benchmark_mode'] and amopt.d['native_pdb']:
             # Process the native before we do anything else
             benchmark_util.analysePdb(amopt.d)
@@ -470,11 +462,9 @@ class Ample(object):
     def setup_workdir(self, argso):
         """Make a work directory - this way all output goes into this directory.
         
-        This is done before the loggers has been set up so is the only place we
-        should ever use a print statement.
+        This is done before the loggers has been set up so no logging is possible.
         """
         if argso['work_dir'] and not argso['restart_pkl']:
-            print('Making a named work directory: %s', argso['work_dir'])
             try:
                 os.mkdir(argso['work_dir'])
             except Exception as e:
@@ -484,11 +474,10 @@ class Ample(object):
             if not os.path.exists(argso['run_dir']):
                 msg = 'Cannot find run directory: {0}'.format(argso['run_dir'])
                 exit_util.exit_error(msg, sys.exc_info()[2])
-            if bool(argso['rvapi_document']):
+            if argso['rvapi_document']:
                 # With JSCOFE we run in the run directory
                 argso['work_dir'] = argso['run_dir']
             else:
-                print('Making a run directory: ' 'checking for previous runs...')
                 argso['work_dir'] = ample_util.make_workdir(argso['run_dir'],
                                                             ccp4i2=bool(argso['ccp4i2_xml']))
         os.chdir(argso['work_dir'])
