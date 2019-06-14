@@ -452,15 +452,15 @@ class AmpleOutput(object):
                     pyrvapi.rvapi_add_data(data_refmac,
                                             "REFMAC PDB",
                                             os.path.splitext(self.fix_path(r['REFMAC_pdbout']))[0],
-                                            "xyz:map",
+                                            "xyz",
                                             sec_refmac,
                                             2, 0, 1, 1, True)
-                    pyrvapi.rvapi_append_to_data(data_refmac, self.fix_path(r['REFMAC_mtzout']), "xyz:map")
+                    pyrvapi.rvapi_append_to_data(data_refmac, self.fix_path(r['REFMAC_mtzout']), "hkl:map")
                 if os.path.isfile(str(r['REFMAC_logfile'])):
                     pyrvapi.rvapi_add_data("data_refmac_logfile_{0}".format(name),
                                             "REFMAC Logfile",
                                             self.fix_path(r['REFMAC_logfile']),
-                                            "text",
+                                            "summary",
                                             sec_refmac,
                                             2, 0, 1, 1, True)
 
