@@ -451,7 +451,8 @@ class AmpleOutput(object):
                     data_refmac = "data_refmac_out_{0}".format(name) + uid
                     pyrvapi.rvapi_add_data(data_refmac,
                                             "REFMAC PDB",
-                                            os.path.splitext(self.fix_path(r['REFMAC_pdbout']))[0],
+                                            #os.path.splitext(self.fix_path(r['REFMAC_pdbout']))[0],
+                                            self.fix_path(r['REFMAC_pdbout']),
                                             "xyz",
                                             sec_refmac,
                                             2, 0, 1, 1, True)
