@@ -1,36 +1,4 @@
 #!/usr/bin/env ccp4-python
-"""Module to interact with pyrvapi
-
-Notes
------
-
-:obj:`remove_widget()` may result in an unexpected unless you put :obj:`flush()` immediately before **and** immediately after calling them, e.g.:
-
-.. code-block:: python
-
-   >>> pyrvapi_flush()
-   >>> for i in range():
-   ...     rvapi_remove_widget(..i..)
-   >>> rvapi_flush()
-
-This is because chronology of rvapi calls between flushes is not necessarily the same as chronology of making/changing widgets in the page. E.g. in sequence of calls:
-
-.. code-block:: python
-
-   >>> rvapi_flush()
-   >>> rvapi_action1()
-   >>> rvapi_action2()
-   >>> rvapi_action3()
-   >>> rvapi_flush()
-   >>> rvapi_action4()
-   >>> rvapi_action5()
-   >>> rvapi_action6()
-   >>> rvapi_flush()
-
-it is guaranteed that results of actions 4-6 will appear after results from 1-3, but there is no guarantee that results from 1-3 and 4-6 groups will appear in exactly that order. E.g., the page may perform actions like  3-1-2-5-4-6, but never like 6-4-1-2-3-5.
-
-"""
-
 __author__ = "Jens Thomas"
 __date__ = "03 Mar 2015"
 __version__ = "1.0"
@@ -44,7 +12,6 @@ import urlparse
 import uuid
 
 from ample import ensembler
-from ample.util import ample_util
 from ample.util import mrbump_util
 from ample.util import reference_manager
 
@@ -56,6 +23,28 @@ try: import pyrvapi_ext as API
 except ImportError: API = None
 
 logger = logging.getLogger(__name__)
+
+# Utility functions
+def have_files(results_dict, *keylist, **kwargs):
+    """Check if files in dictionary exist.
+    
+    if kwarg check is 'all' (default) return True if all exist,
+    if check is 'any' return True of any exist
+    """
+    check = 'all'
+    if 'check' in kwargs:
+        assert kwargs['check'] in ['all', 'any']
+        check = kwargs['check']
+    found = 0
+    for k in keylist:
+        if k in results_dict and os.path.isfile(str(results_dict[k])):
+            if check == 'any':
+                return True
+            found += 1
+    if check == 'all' and len(keylist) == found:
+        return True
+    return False
+
 
 class AmpleOutput(object):
     """Display the output of an AMPLE job."""
@@ -230,24 +219,158 @@ class AmpleOutput(object):
                              ensemble_results,
                              "Top {0} SHELXE Results".format(mrbump_util.TOP_KEEP))
         mrbsum.sortResults(prioritise="PHASER_TFZ")
+        # Add seperator between results - doesn't work as not deleted on refresh
+        #pyrvapi.rvapi_add_text("<br/><hr/><br/>", self.results_tab_id, 0, 0, 1, 1)
         self.results_section(self.results_tab_id,
                              mrbsum.results,
                              ensemble_results,
                              "Top {0} PHASER Results".format(mrbump_util.TOP_KEEP))
         return self.results_tab_id
 
-    def _create_summary_tab(self):
-        if not self.summary_tab_id:
-            self.summary_tab_id = "summary_tab"
+    def results_section(self, results_tab_id, mrb_results, ensemble_results, section_title):
+        """Results Tab"""
+        if not mrb_results:
+            return
+        # Create unique identifier for this section by using the id
+        # All ids will have this appended to avoid clashes
+        uid = str(uuid.uuid4())
+        section_id = section_title.replace(" ", "_") + uid
+        self.results_tab_sections.append(section_id) # Add to list so we can remove if we update
+        pyrvapi.rvapi_add_panel(section_id, results_tab_id, 0, 0, 1, 1)
+        pyrvapi.rvapi_add_text("<h3>{0}</h3>".format(section_title), section_id, 0, 0, 1, 1)
+        results_tree = "results_tree" + section_id
+        pyrvapi.rvapi_add_tree_widget(results_tree, section_title, section_id, 0, 0, 1, 1)
+        for r in mrb_results:
+            ensemble_name = r['ensemble_name']
+            container_id = "sec_{0}".format(ensemble_name) + uid
+            pyrvapi.rvapi_add_panel(container_id, results_tree, 0, 0, 1, 1)
+
+            header = "<h3>Results for ensemble: {0}</h3>".format(ensemble_name)
+            pyrvapi.rvapi_add_text(header, container_id, 0, 0, 1, 1)
+
+            sec_table = "sec_table_{0}".format(ensemble_name) + uid
+            title = "Results table: {0}".format(ensemble_name)
             title = "Summary"
-            pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.citation_tab_id, False)
-            # Create pending section until we have data to show
-            self.summary_tab_pending_sec_id = 'summary_tab_pending'
-            pyrvapi.rvapi_add_section(self.summary_tab_pending_sec_id, "Processing...",
-                                      self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<p>No results are currently available. Please check back later.</p>"
-            pyrvapi.rvapi_add_text(rstr, self.summary_tab_pending_sec_id, 0, 0, 1, 1)
+            pyrvapi.rvapi_add_section(sec_table, title, container_id, 0, 0, 1, 1, True)
+            table_id = "table_{0}".format(ensemble_name) + uid
+            pyrvapi.rvapi_add_table(table_id, "", sec_table, 1, 0, 1, 1, False)
+            tdata = mrbump_util.ResultsSummary().results_table([r])
+            self.fill_table(table_id, tdata, tooltips=self._mrbump_tooltips)
+            # Ensemble
+            if ensemble_results:
+                epdb = self.ensemble_pdb(r, ensemble_results)
+                if epdb:
+                    sec_ensemble = "sec_ensemble_{0}".format(ensemble_name) + uid
+                    pyrvapi.rvapi_add_section(sec_ensemble, "Ensemble Search Model", container_id, 0, 0, 1, 1, False)
+                    data_ensemble = "data_ensemble_{0}".format(ensemble_name) + uid
+                    pyrvapi.rvapi_add_data(data_ensemble,
+                                           "Ensemble PDB",
+                                           self.fix_path(epdb),
+                                           "XYZOUT",
+                                           sec_ensemble,
+                                           2, 0, 1, 1, True)
+            # PHASER
+            self.add_results_section(result_dict=r,
+                                      ensemble_name=ensemble_name,
+                                      program_name='PHASER',
+                                      logfile_key='PHASER_logfile',
+                                      pdb_key='PHASER_pdbout',
+                                      mtz_key='PHASER_mtzout',
+                                      uid=uid,
+                                      container_id=container_id)
+            # REFMAC
+            self.add_results_section(result_dict=r,
+                                      ensemble_name=ensemble_name,
+                                      program_name='Refmac',
+                                      logfile_key='REFMAC_logfile',
+                                      pdb_key='REFMAC_pdbout',
+                                      mtz_key='REFMAC_mtzout',
+                                      uid=uid,
+                                      container_id=container_id)
+            # Buccaner
+            self.add_results_section(result_dict=r,
+                                      ensemble_name=ensemble_name,
+                                      program_name='BUCCANEER',
+                                      logfile_key='BUCC_logfile',
+                                      pdb_key='BUCC_pdbout',
+                                      mtz_key='BUCC_mtzout',
+                                      uid=uid,
+                                      container_id=container_id)
+            # Arpwarp
+            self.add_results_section(result_dict=r,
+                                      ensemble_name=ensemble_name,
+                                      program_name='ArpWarp',
+                                      logfile_key='ARP_logfile',
+                                      pdb_key='ARP_pdbout',
+                                      mtz_key='ARP_mtzout',
+                                      uid=uid,
+                                      container_id=container_id)
+            # SHELXE
+            self.add_results_section(result_dict=r,
+                                      ensemble_name=ensemble_name,
+                                      program_name='SHELXE',
+                                      logfile_key='SHELXE_logfile',
+                                      pdb_key='SHELXE_pdbout',
+                                      mtz_key='SHELXE_mtzout',
+                                      uid=uid,
+                                      container_id=container_id)
+            # Buccaner Rebuild
+            self.add_results_section(result_dict=r,
+                                      ensemble_name=ensemble_name,
+                                      program_name='BUCCANEER SHELXE Trace Rebuild',
+                                      logfile_key='SXRBUCC_logfile',
+                                      pdb_key='SXRBUCC_pdbout',
+                                      mtz_key='SXRBUCC_mtzout',
+                                      uid=uid,
+                                      container_id=container_id)
+            # Arpwarp Rebuild
+            self.add_results_section(result_dict=r,
+                                      ensemble_name=ensemble_name,
+                                      program_name='ARPWARP SHELXE Trace Rebuild',
+                                      logfile_key='SXRARP_logfile',
+                                      pdb_key='SXRARP_pdbout',
+                                      mtz_key='SXRARP_mtzout',
+                                      uid=uid,
+                                      container_id=container_id)
+            pyrvapi.rvapi_set_tree_node(results_tree, container_id, "{0}".format(ensemble_name), "auto", "")
         return
+    
+    def add_results_section(self,
+                             result_dict=None,
+                             ensemble_name=None,
+                             program_name=None,
+                             logfile_key=None,
+                             pdb_key=None,
+                             mtz_key=None,
+                             uid=None,
+                             container_id=None):
+        assert result_dict and ensemble_name and program_name and logfile_key and pdb_key and \
+        mtz_key and uid and container_id
+        have_logfile = have_files(result_dict, logfile_key)
+        have_pdb_and_mtz = have_files(result_dict, pdb_key, mtz_key)
+        if not (have_logfile or have_pdb_and_mtz):
+            return
+        program_id = program_name.lower().replace(' ', '_')
+        this_sec_id = "sec_{0}_{1}".format(program_id, ensemble_name) + uid
+        pyrvapi.rvapi_add_section(this_sec_id, "{} Outputs".format(program_name), container_id, 0, 0, 1, 1, False)
+        if have_pdb_and_mtz:
+            data_id = "o{0}{1}".format(program_id, ensemble_name) + uid
+            pyrvapi.rvapi_add_data(data_id,
+                                    "{} OUTPUTS".format(program_name),
+                                    self.fix_path(result_dict[pdb_key]),
+                                    "xyz",
+                                    this_sec_id,
+                                    2, 0, 1, 1, True)
+            pyrvapi.rvapi_append_to_data(data_id, self.fix_path(result_dict[mtz_key]), "hkl:map")
+        if have_logfile:
+            data_id = "l{0}{1}".format(program_id, ensemble_name) + uid
+            pyrvapi.rvapi_add_data(data_id,
+                                    "{} Logfile".format(program_name),
+                                    self.fix_path(result_dict[logfile_key]),
+                                    #"summary",
+                                    "text",
+                                    this_sec_id,
+                                    2, 0, 1, 1, True)
 
     def create_summary_tab(self, ample_dict):
         self._create_summary_tab()
@@ -277,6 +400,19 @@ class AmpleOutput(object):
             rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(reference_manager.survey_url)
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
         return self.summary_tab_id
+
+    def _create_summary_tab(self):
+        if not self.summary_tab_id:
+            self.summary_tab_id = "summary_tab"
+            title = "Summary"
+            pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.citation_tab_id, False)
+            # Create pending section until we have data to show
+            self.summary_tab_pending_sec_id = 'summary_tab_pending'
+            pyrvapi.rvapi_add_section(self.summary_tab_pending_sec_id, "Processing...",
+                                      self.summary_tab_id, 0, 0, 1, 1, True)
+            rstr = "<p>No results are currently available. Please check back later.</p>"
+            pyrvapi.rvapi_add_text(rstr, self.summary_tab_pending_sec_id, 0, 0, 1, 1)
+        return
 
     def do_create_ensembles_section(self, ample_dict):
         return not (ample_dict.get('single_model_mode') or ample_dict.get('homologs') or ample_dict.get('ideal_helices')) \
@@ -337,7 +473,7 @@ class AmpleOutput(object):
             self.create_results_tab(ample_dict)
             pyrvapi.rvapi_flush()
         except Exception as e:
-            logger.critical("Error displaying results!\n%s", traceback.format_exc())
+            logger.critical("Error displaying results: %s\n%s", e, traceback.format_exc())
         return True
 
     def ensemble_pdb(self, mrbump_result, ensembles_data):
@@ -376,204 +512,7 @@ class AmpleOutput(object):
 
     def _got_mrbump_results(self, ample_dict):
         return ample_dict.get('mrbump_results') and len(ample_dict['mrbump_results'])
-
-    def results_section(self, results_tab_id, mrb_results, ensemble_results, section_title):
-        #
-        # Results Tab
-        #
-        if not mrb_results:
-            return
-        # Create unique identifier for this section by using the id
-        # All ids will have this appended to avoid clashes
-        uid = str(uuid.uuid4())
-        section_id = section_title.replace(" ", "_") + uid
-        self.results_tab_sections.append(section_id) # Add to list so we can remove if we update
-        pyrvapi.rvapi_add_panel(section_id, results_tab_id, 0, 0, 1, 1)
-        pyrvapi.rvapi_add_text("<h3>{0}</h3>".format(section_title), section_id, 0, 0, 1, 1)
-        results_tree = "results_tree" + section_id
-        pyrvapi.rvapi_add_tree_widget(results_tree, section_title, section_id, 0, 0, 1, 1)
-        for r in mrb_results:
-            name = r['ensemble_name']
-            container_id = "sec_{0}".format(name) + uid
-            pyrvapi.rvapi_add_panel(container_id, results_tree, 0, 0, 1, 1)
-
-            header = "<h3>Results for ensemble: {0}</h3>".format(name)
-            pyrvapi.rvapi_add_text(header, container_id, 0, 0, 1, 1)
-
-            sec_table = "sec_table_{0}".format(name) + uid
-            title = "Results table: {0}".format(name)
-            title = "Summary"
-            pyrvapi.rvapi_add_section(sec_table, title, container_id, 0, 0, 1, 1, True)
-            table_id = "table_{0}".format(name) + uid
-            pyrvapi.rvapi_add_table(table_id, "", sec_table, 1, 0, 1, 1, False)
-            tdata = mrbump_util.ResultsSummary().results_table([r])
-            self.fill_table(table_id, tdata, tooltips=self._mrbump_tooltips)
-
-            # Ensemble
-            if ensemble_results:
-                epdb = self.ensemble_pdb(r, ensemble_results)
-                if epdb:
-                    sec_ensemble = "sec_ensemble_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_section(sec_ensemble, "Ensemble Search Model", container_id, 0, 0, 1, 1, False)
-                    data_ensemble = "data_ensemble_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_data(data_ensemble,
-                                           "Ensemble PDB",
-                                           self.fix_path(epdb),
-                                           "XYZOUT",
-                                           sec_ensemble,
-                                           2, 0, 1, 1, True)
-            # PHASER
-            if os.path.isfile(str(r['PHASER_logfile'])) or (os.path.isfile(str(r['PHASER_pdbout'])) and os.path.isfile(str(r['PHASER_mtzout']))):
-                sec_phaser = "sec_phaser_{0}".format(name) + uid
-                pyrvapi.rvapi_add_section(sec_phaser, "PHASER Outputs", container_id, 0, 0, 1, 1, False)
-                if os.path.isfile(str(r['PHASER_pdbout'])) and os.path.isfile(str(r['PHASER_mtzout'])):
-                    data_phaser = "data_phaser_out_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_data(data_phaser,
-                                            "PHASER PDB",
-                                            os.path.splitext(self.fix_path(r['PHASER_pdbout']))[0],
-                                            "xyz:map",
-                                            sec_phaser,
-                                            2, 0, 1, 1, True)
-                    pyrvapi.rvapi_append_to_data(data_phaser, self.fix_path(r['PHASER_mtzout']), "xyz:map")
-                if os.path.isfile(str(r['PHASER_logfile'])):
-                    pyrvapi.rvapi_add_data("data_phaser_logfile_{0}".format(name),
-                                            "PHASER Logfile",
-                                            self.fix_path(r['PHASER_logfile']),
-                                            "text",
-                                            sec_phaser,
-                                            2, 0, 1, 1, True)
-
-            # REFMAC
-            if os.path.isfile(str(r['REFMAC_logfile'])) or (os.path.isfile(str(r['REFMAC_pdbout'])) and os.path.isfile(str(r['REFMAC_mtzout']))):
-                sec_refmac = "sec_refmac_{0}".format(name) + uid
-                pyrvapi.rvapi_add_section(sec_refmac, "REFMAC Outputs", container_id, 0, 0, 1, 1, False)
-                if os.path.isfile(str(r['REFMAC_pdbout'])) and os.path.isfile(str(r['REFMAC_mtzout'])):
-                    data_refmac = "data_refmac_out_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_data(data_refmac,
-                                            "REFMAC PDB",
-                                            #os.path.splitext(self.fix_path(r['REFMAC_pdbout']))[0],
-                                            self.fix_path(r['REFMAC_pdbout']),
-                                            "xyz",
-                                            sec_refmac,
-                                            2, 0, 1, 1, True)
-                    pyrvapi.rvapi_append_to_data(data_refmac, self.fix_path(r['REFMAC_mtzout']), "hkl:map")
-                if os.path.isfile(str(r['REFMAC_logfile'])):
-                    pyrvapi.rvapi_add_data("data_refmac_logfile_{0}".format(name),
-                                            "REFMAC Logfile",
-                                            self.fix_path(r['REFMAC_logfile']),
-                                            "summary",
-                                            sec_refmac,
-                                            2, 0, 1, 1, True)
-
-            # Buccaner
-            if os.path.isfile(str(r['BUCC_logfile'])) or (os.path.isfile(str(r['BUCC_pdbout'])) and os.path.isfile(str(r['BUCC_mtzout']))):
-                sec_bucc = "sec_bucc_{0}".format(name) + uid
-                pyrvapi.rvapi_add_section(sec_bucc, "BUCCANEER Outputs", container_id, 0, 0, 1, 1, False)
-                if os.path.isfile(str(r['BUCC_pdbout'])) and os.path.isfile(str(r['BUCC_mtzout'])):
-                    data_bucc = "data_bucc_out_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_data(data_bucc,
-                                            "BUCC PDB",
-                                            os.path.splitext(self.fix_path(r['BUCC_pdbout']))[0],
-                                            "xyz:map",
-                                            sec_bucc,
-                                            2, 0, 1, 1, True)
-                    pyrvapi.rvapi_append_to_data(data_bucc, self.fix_path(r['BUCC_mtzout']), "xyz:map")
-                if os.path.isfile(str(r['BUCC_logfile'])):
-                    pyrvapi.rvapi_add_data("data_bucc_logfile_{0}".format(name),
-                                            "BUCC Logfile",
-                                            self.fix_path(r['BUCC_logfile']),
-                                            "text",
-                                            sec_bucc,
-                                            2, 0, 1, 1, True)
-
-            # Arpwarp
-            if os.path.isfile(str(r['ARP_logfile'])) or (os.path.isfile(str(r['ARP_pdbout'])) and os.path.isfile(str(r['ARP_mtzout']))):
-                sec_arp = "sec_arp_{0}".format(name) + uid
-                pyrvapi.rvapi_add_section(sec_arp, "ARPWARP Outputs", container_id, 0, 0, 1, 1, False)
-                if os.path.isfile(str(r['ARP_pdbout'])) and os.path.isfile(str(r['ARP_mtzout'])):
-                    data_arp = "data_arp_out_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_data(data_arp,
-                                            "ARP PDB",
-                                            os.path.splitext(self.fix_path(r['ARP_pdbout']))[0],
-                                            "xyz:map",
-                                            sec_arp,
-                                            2, 0, 1, 1, True)
-                    pyrvapi.rvapi_append_to_data(data_arp, self.fix_path(r['ARP_mtzout']), "xyz:map")
-                if os.path.isfile(str(r['ARP_logfile'])):
-                    pyrvapi.rvapi_add_data("data_arp_logfile_{0}".format(name),
-                                            "ARP Logfile",
-                                            self.fix_path(r['ARP_logfile']),
-                                            "text",
-                                            sec_arp,
-                                            2, 0, 1, 1, True)
-
-
-            # SHELXE
-            if os.path.isfile(str(r['SHELXE_logfile'])) or (os.path.isfile(str(r['SHELXE_pdbout'])) and os.path.isfile(str(r['SHELXE_mtzout']))):
-                sec_shelxe = "sec_shelxe_{0}".format(name) + uid
-                pyrvapi.rvapi_add_section(sec_shelxe, "SHELXE Outputs", container_id, 0, 0, 1, 1, False)
-                if os.path.isfile(str(r['SHELXE_pdbout'])) and os.path.isfile(str(r['SHELXE_mtzout'])):
-                    data_shelxe = "data_shelxe_out_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_data(data_shelxe,
-                                            "SHELXE PDB",
-                                            os.path.splitext(self.fix_path(r['SHELXE_pdbout']))[0],
-                                            "xyz:map",
-                                            sec_shelxe,
-                                            2, 0, 1, 1, True)
-                    pyrvapi.rvapi_append_to_data(data_shelxe, self.fix_path(r['SHELXE_mtzout']), "xyz:map")
-                if os.path.isfile(str(r['SHELXE_logfile'])):
-                    pyrvapi.rvapi_add_data("data_shelxe_logfile_{0}".format(name),
-                                            "SHELXE Logfile",
-                                            self.fix_path(r['SHELXE_logfile']),
-                                            "text",
-                                            sec_shelxe,
-                                            2, 0, 1, 1, True)
-
-            # Buccaner Rebuild
-            if os.path.isfile(str(r['SXRBUCC_logfile'])) or (os.path.isfile(str(r['SXRBUCC_pdbout'])) and os.path.isfile(str(r['SXRBUCC_mtzout']))):
-                sec_sxrbucc = "sec_sxrbucc_{0}".format(name) + uid
-                pyrvapi.rvapi_add_section(sec_sxrbucc, "BUCCANEER SHELXE Trace Rebuild Outputs", container_id, 0, 0, 1, 1, False)
-                if os.path.isfile(str(r['SXRBUCC_pdbout'])) and os.path.isfile(str(r['SXRBUCC_mtzout'])):
-                    data_sxrbucc = "data_sxrbucc_out_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_data(data_sxrbucc,
-                                            "SXRBUCC PDB",
-                                            os.path.splitext(self.fix_path(r['SXRBUCC_pdbout']))[0],
-                                            "xyz:map",
-                                            sec_sxrbucc,
-                                            2, 0, 1, 1, True)
-                    pyrvapi.rvapi_append_to_data(data_sxrbucc, self.fix_path(r['SXRBUCC_mtzout']), "xyz:map")
-                if os.path.isfile(str(r['SXRBUCC_logfile'])):
-                    pyrvapi.rvapi_add_data("data_sxrbucc_logfile_{0}".format(name),
-                                            "SXRBUCC Logfile",
-                                            self.fix_path(r['SXRBUCC_logfile']),
-                                            "text",
-                                            sec_sxrbucc,
-                                            2, 0, 1, 1, True)
-
-            # Arpwarp Rebuild
-            if os.path.isfile(str(r['SXRARP_logfile'])) or (os.path.isfile(str(r['SXRARP_pdbout'])) and os.path.isfile(str(r['SXRARP_mtzout']))):
-                sec_sxrarp = "sec_sxrarp_{0}".format(name) + uid
-                pyrvapi.rvapi_add_section(sec_sxrarp, "ARPWARP SHELXE Trace Redbuild Outputs", container_id, 0, 0, 1, 1, False)
-                if os.path.isfile(str(r['SXRARP_pdbout'])) and os.path.isfile(str(r['SXRARP_mtzout'])):
-                    data_sxrarp = "data_sxrarp_out_{0}".format(name) + uid
-                    pyrvapi.rvapi_add_data(data_sxrarp,
-                                           "SXRARP PDB",
-                                           os.path.splitext(self.fix_path(r['SXRARP_pdbout']))[0],
-                                           "xyz:map",
-                                           sec_sxrarp,
-                                           2, 0, 1, 1, True)
-                    pyrvapi.rvapi_append_to_data(data_sxrarp, self.fix_path(r['SXRARP_mtzout']), "xyz:map")
-                if os.path.isfile(str(r['SXRARP_logfile'])):
-                    pyrvapi.rvapi_add_data("data_sxrarp_logfile_{0}".format(name),
-                                           "SXRARP Logfile",
-                                           self.fix_path(r['SXRARP_logfile']),
-                                           "text",
-                                           sec_sxrarp,
-                                           2, 0, 1, 1, True)
-
-            pyrvapi.rvapi_set_tree_node(results_tree, container_id, "{0}".format(name), "auto", "")
-        return
-
+    
     def rm_pending_section(self):
         if self.summary_tab_pending_sec_id:
             pyrvapi.rvapi_flush()
@@ -613,8 +552,10 @@ class AmpleOutput(object):
         pyrvapi.rvapi_store_document2(rvdoc)
         return
 
+
 if __name__ == "__main__":
     import copy, sys, time
+    from ample.util import ample_util
     logging.basicConfig(level=logging.DEBUG)
     pklfile = sys.argv[1]
     ample_dict = ample_util.read_amoptd(pklfile)
@@ -628,17 +569,17 @@ if __name__ == "__main__":
     view1_dict = copy.copy(ample_dict)
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
-
+ 
     SLEEP = 5
-
+ 
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-
+ 
     #for i in range(10):
     view1_dict['ensembles_data'] = ample_dict['ensembles_data']
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-
+ 
     mrbump_results = []
     for r in ample_dict['mrbump_results'][0:3]:
         r['SHELXE_CC'] = None
@@ -647,10 +588,10 @@ if __name__ == "__main__":
     view1_dict['mrbump_results'] = mrbump_results
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-
+ 
     view1_dict['mrbump_results'] = ample_dict['mrbump_results'][0:5]
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
-
+ 
     view1_dict['mrbump_results'] = ample_dict['mrbump_results']
     AR.display_results(view1_dict)
