@@ -1,6 +1,29 @@
 Changelog
 =========
 
+1.5.0
+------
+
+Added
+~~~~~
+- logging can be configured with a JSON file.
+- modelling can be run as a standalone module.
+- added a Coiled-coil mode.
+- added the ability to model multimers (developed with Owen Davies at Newcastle).
+- ``ample_into_ccp4.sh`` script for linking AMPLE into the current CCP4 installation.
+
+Changed
+~~~~~~~
+- updated the processing of supplied models so multiple chains are supported.
+- automatic determination of the type of models supplied (homologs, NMR ensemble, etc.)
+- boolean arguments (e.g. -ideal_helices) now don't require an argument to be True.
+- removed all MAXCLUSTER code.
+- ROSETTA modelling now runs using a flagsfile.
+- turned off all rebuilding for resolutions > 4.0
+- updated integration tests to be less fragile.
+
+
+
 1.4.5
 ------
 

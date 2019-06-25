@@ -46,7 +46,15 @@ extensions = [
 try:
     import sphinx_bootstrap_theme
 except ImportError:
-    msg = "Error: sphinx_bootstrap_thememust be installed before generating this documentation"
+    msg = "Error: sphinx_bootstrap_thememust be installed before generating this documentation\n" + \
+          "This can be installed with the command: {} -m pip install sphinx_bootstrap_theme".format(sys.executable)
+    raise ImportError(msg)
+
+try:
+    import sphinxarg
+except ImportError:
+    msg = "Error: sphinxarg be installed before generating this documentation\n" + \
+          "This can be installed with the command: {} -m pip install sphinx-argparse".format(sys.executable)
     raise ImportError(msg)
 
 try:
@@ -70,7 +78,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'AMPLE'
-copyright = u'2016-2017, University of Liverpool'
+copyright = u'2016-2019, University of Liverpool'
 author = u'Jens Thomas, Felix Simkovic, Adam Simpkin, Ronan Keegan & Daniel Rigden'
 
 # The short X.Y version.

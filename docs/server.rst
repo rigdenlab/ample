@@ -1,16 +1,29 @@
 .. _server:
 
-Server
-======
+Servers
+=======
 
-A server implementation of AMPLE is available through CCP4 on-line.
+There are currently two server implementations of AMPLE.
+
+One is available through CCP4 on-line:
 
 .. raw:: html
 
    <br>
    <div>
-       <a href="https://www.ccp4.ac.uk/ccp4online/" class="btn btn-primary btn-lg">Go to CCP4 Online Server</a>
+       <a target="_blank" href="https://www.ccp4.ac.uk/ccp4online/" class="btn btn-primary btn-lg">Go to CCP4 Online Server</a>
    </div>
    </br>
 
-This makes some of the most popular protocols available in an easy-to-use form but greater flexibility is accessible through the CCP4 GUIs or the command line.
+AMPLE is also available through CCP4-Cloud:
+
+.. raw:: html
+
+   <br>
+   <div>
+       <a target="_blank" href="http://ccp4serv6.rc-harwell.ac.uk/jscofe/" class="btn btn-primary btn-lg">Go to CCP4 Cloud</a>
+   </div>
+   </br>
+   
+These make some of the most popular protocols available in an easy-to-use form but greater flexibility is accessible through the CCP4 GUIs or the command line.
+
