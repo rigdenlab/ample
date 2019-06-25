@@ -10,7 +10,7 @@ import os
 import re
 import shutil
 
-from constants import ENSEMBLE_MAX_MODELS, ALLATOM, POLYALA, RELIABLE, UNMODIFIED
+from ample.ensembler.constants import ENSEMBLE_MAX_MODELS, ALLATOM, POLYALA, RELIABLE, UNMODIFIED
 from ample.util import ample_util
 from ample.util import pdb_edit
 from ample.util import sequence_util
@@ -98,7 +98,7 @@ def model_core_from_theseus(models, alignment_file, var_by_res, work_dir=None):
     # Format is expected to be: '>1ujb.pdb(A)'
     names = [ h[1:].split('(')[0] for h in seqalign.headers ]
     if not seqalign.pdbs == names:
-        raise RuntimeError, "headers and names of pdb files do not match!\n{0}\n{1}".format(seqalign.pdbs, names)
+        raise RuntimeError("headers and names of pdb files do not match!\n{0}\n{1}".format(seqalign.pdbs, names))
     
     # Get the name of the first pdb that the alignment is based on
     first = seqalign.pdbs[0]
@@ -387,7 +387,7 @@ class Ensembler(object):
             elif sct == POLYALA:
                 pdb_edit.backbone(raw_ensemble.pdb, fpath)
             else:
-                raise RuntimeError, "Unrecognised side_chain_treatment: {0}".format(sct)
+                raise RuntimeError("Unrecognised side_chain_treatment: {0}".format(sct))
             
             # Count the number of atoms in the ensemble-only required for benchmark mode
             natoms, nresidues = pdb_edit.num_atoms_and_residues(fpath, first=True)

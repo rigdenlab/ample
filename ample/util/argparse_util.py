@@ -202,6 +202,8 @@ def add_ensembler_options(parser=None):
     except ImportError:
         allowed_side_chain_treatments = ['polyala', 'reliable', 'allatom', 'unmod']
         truncation_methods = ['percent']
+        SPICKER_RMSD = 'spicker'
+        SPICKER_TM = 'spicker_tm'
     else:
         allowed_side_chain_treatments = ALLOWED_SIDE_CHAIN_TREATMENTS[:]
         truncation_methods = [t.value for t in TRUNCATION_METHODS]

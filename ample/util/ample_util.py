@@ -14,8 +14,8 @@ import tempfile
 import warnings
 import zipfile
 
-import ccp4
-import exit_util
+from ample.util import ccp4
+from ample.util import exit_util
 
 from ample.constants import SHARE_DIR, AMPLEDIR, I2DIR
 

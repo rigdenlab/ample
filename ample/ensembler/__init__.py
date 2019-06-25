@@ -12,17 +12,23 @@ __version__ = "1.0"
 
 import collections
 import glob
-import iotbx.pdb
 import logging
 import operator
 import os
 import shutil
 import sys
+import warnings
 
-from abinitio import AbinitioEnsembler
+#try:
+import iotbx.pdb
+#except (ImportError, ModuleNotFoundError):
+#    warnings.warn("Module iotbx.pdb not found in ensembler.__init__.py - assuming running under sphinx to generate docs")
+    
+
+from ample.ensembler.abinitio import AbinitioEnsembler
 from ample.ensembler.constants import SPICKER_TM
-from homologs import HomologEnsembler
-from single_model import SingleModelEnsembler
+from ample.ensembler.homologs import HomologEnsembler
+from ample.ensembler.single_model import SingleModelEnsembler
 from ample.util import ample_util
 from ample.util import argparse_util
 from ample.util import exit_util
