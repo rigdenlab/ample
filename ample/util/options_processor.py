@@ -427,9 +427,9 @@ def process_mr_options(optd):
         logger.info('Not rebuilding in ARP/wARP')
 
     if optd['refine_rebuild_buccaneer'] or optd['shelxe_rebuild_buccaneer']:
-        logger.info('Rebuilding in Bucaneer')
+        logger.info('Rebuilding in Buccaneer')
     else:
-        logger.info('Not rebuilding in Bucaneer')
+        logger.info('Not rebuilding in Buccaneer')
 
 
 def process_restart_options(optd):
