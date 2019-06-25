@@ -9,7 +9,7 @@ Added
 - logging can be configured with a JSON file.
 - modelling can be run as a standalone module.
 - added a Coiled-coil mode.
-- added the ability to model multimers (developed with Owen Davies at Newcastle).
+- added the ability to model multimers (developed together with Owen Davies at Newcastle).
 - ``ample_into_ccp4.sh`` script for linking AMPLE into the current CCP4 installation.
 
 Changed
