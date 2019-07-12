@@ -31,7 +31,7 @@ def keyword_dict(ensemble_pdb, name, amoptd, extra_options={}):
                 'arpwarp_cycles',
                 'buccaneer_cycles',
                 'debug',
-                'domain_all_chains_pdb',
+                'existing_mr_solution',
                 'F',
                 'FREE',
                 'mr_keys',
@@ -119,8 +119,8 @@ def mrbump_keyword_file(odict, fixed_iden=0.6):
             mrs += 'SXRARPW True\n'
     if odict['nmasu'] > 0:
         mrs += 'NMASU  {0}\n'.format(odict['nmasu'])
-    if odict['domain_all_chains_pdb']:
-        mrs += 'FIXED_XYZIN {0} IDEN {1}\n'.format(odict['domain_all_chains_pdb'], fixed_iden)
+    if odict['existing_mr_solution']:
+        mrs += 'FIXED_XYZIN {0} IDEN {1}\n'.format(odict['existing_mr_solution'], fixed_iden)
     if odict['native_pdb']:
         mrs += 'PDBNATIVE {0}\n'.format(odict['native_pdb'])
     if odict['phaser_kill'] > 0:

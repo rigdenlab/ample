@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # argparse module. Not needed otherwise
 PACKAGES = ['from_existing_models', 'from_quark_models', 'from_single_model', 
             'homologs', 'ideal_helices',  'import_cluster', 'import_ensembles', 
-            'import_models', 'missing_domain', 'nmr_truncate']
+            'import_models', 'nmr_truncate']
 if not sys.platform.startswith("win"):
     PACKAGES += ['nmr_remodel', 'rosetta_contacts', 'rosetta_contacts_subselect',
                  'rosetta_modelling', 'rosetta_restraints']
