@@ -200,11 +200,6 @@ def process_options(optd):
         contact_util.ContactUtil.check_options(optd)
         optd['use_contacts'] = True
     process_modelling_options(optd)
-    # Misc options
-    if optd['missing_domain']:
-        logger.info('Processing missing domain\n')
-        if not os.path.exists(optd['domain_all_chains_pdb']):
-            raise RuntimeError('Cannot find file domain_all_chains_pdb: {0}'.format(optd['domain_all_chains_pdb']))
     if optd['coiled_coil']:
         # Add in Owen's fixes
         optd['rg_reweight'] = 0.0

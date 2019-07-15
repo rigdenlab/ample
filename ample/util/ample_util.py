@@ -328,6 +328,7 @@ def make_workdir(run_dir, ccp4i2=False, MAX_WORKDIRS=100):
     os.mkdir(work_dir)
     return work_dir
 
+
 def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check=False, **kwargs):
     """Execute a command and return the exit code.
 
@@ -335,7 +336,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
     ----------
     cmd : list
        Command to run as a list
-    stdin : str, optional
+    stdin : str or filehandle, optional
        Stdin for the command
     logfile : str, optional
        The path to the logfile
@@ -369,35 +370,36 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
 
     file_handle = False
     if logfile:
-        if type(logfile) == file:
+        try:
+            logfile = os.path.abspath(logfile)
+        except TypeError:
             file_handle = True
+        if file_handle:
             logf = logfile
             logfile = os.path.abspath(logf.name)
         else:
-            logfile = os.path.abspath(logfile)
             logf = open(logfile, "w")
-        if dolog: logger.debug("Logfile is: %s", logfile)
+            logfile = os.path.abspath(logfile)
+        if dolog:
+            logger.debug("Logfile is: %s", logfile)
     else:
-        logf = tmp_file_name()
-
+        logf = tempfile.NamedTemporaryFile(dir=directory, delete=False, suffix='')
     if stdin is not None:
         stdinstr = stdin
         stdin = subprocess.PIPE
-
     # Windows needs some special treatment
     if os.name == "nt":
         kwargs.update({'bufsize': 0, 'shell' : "False"})
     p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs)
 
     if stdin is not None:
-        p.stdin.write(stdinstr)
+        p.stdin.write(stdinstr.encode())
         p.stdin.close()
-        if dolog: logger.debug("stdin for cmd was: %s", stdinstr)
-
+        if dolog:
+            logger.debug("stdin for cmd was: %s", stdinstr)
     p.wait()
     if not file_handle:
         logf.close()
-
     return p.returncode
 
 
