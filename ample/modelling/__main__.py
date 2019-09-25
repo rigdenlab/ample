@@ -14,6 +14,7 @@ from ample.util.sequence_util import Sequence
 from ample.util import logging_util
 from ample.modelling.rosetta_model import RosettaModel
 
+
 def process_args(args):
     if args.rosetta_flagsfile:
         args.rosetta_flagsfile = os.path.abspath(args.rosetta_flagsfile)
@@ -28,17 +29,15 @@ def process_args(args):
 parser = argparse.ArgumentParser(description="AMPLE Modelling Module")
 # Need to add seperately here as is usually part of MR options
 parser.add_argument('-fasta', help='protein fasta file.')
-parser.add_argument('-nchains', help='The number of chains to select from the multimer for the final single-chain models')
+parser.add_argument(
+    '-nchains', help='The number of chains to select from the multimer for the final single-chain models'
+)
 argparse_util.add_core_options(parser)
 argparse_util.add_rosetta_options(parser)
 argparse_util.add_cluster_submit_options(parser)
 
 work_dir = os.path.abspath('rosetta_modelling')
-parser.set_defaults(submit_cluster = False,
-                    submit_qtype = 'SGE',
-                    submit_array = True,
-                    nmodels = 1000,
-                    work_dir = work_dir)
+parser.set_defaults(submit_cluster=False, submit_qtype='SGE', submit_array=True, nmodels=1000, work_dir=work_dir)
 args = parser.parse_args()
 process_args(args)
 
@@ -48,7 +47,7 @@ logger.info("*** AMPLE ROSETTA modelling package ***")
 
 if not os.path.isdir(args.work_dir):
     os.mkdir(args.work_dir)
-    
+
 rm = RosettaModel()
 if args.rosetta_dir and os.path.isdir(args.rosetta_dir):
     rm.set_paths(rosetta_dir=args.rosetta_dir)

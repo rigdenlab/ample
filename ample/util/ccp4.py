@@ -11,6 +11,7 @@ import os
 
 class CCP4(object):
     """Wrapper class for CCP4 installation"""
+
     def __init__(self):
         self.email = "ccp4@stfc.ac.uk"
         self.root = CCP4RootDirectory()
@@ -19,6 +20,7 @@ class CCP4(object):
 
 class CCP4RootDirectory(object):
     """The CCP4 root directory"""
+
     def __init__(self):
         if "CCP4" not in os.environ:
             raise KeyError(
@@ -42,6 +44,7 @@ class CCP4RootDirectory(object):
 
 class CCP4Version(StrictVersion):
     """The CCP4 version class"""
+
     def __init__(self):
         StrictVersion.__init__(self)
         tversion = '0.0.0'

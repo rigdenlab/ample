@@ -9,19 +9,21 @@ import os
 import sys
 import traceback
 
-try: 
+try:
     import pyrvapi
-except Exception: 
-    pyrvapi=None
+except Exception:
+    pyrvapi = None
+
 
 def _debug_logfile(logger):
     debug_log = None
     if logger.handlers:
         for d in logger.handlers:
-            n='baseFilename'
-            if hasattr(d,n) and d.level==logging.DEBUG:
-                debug_log=getattr(d, n)
+            n = 'baseFilename'
+            if hasattr(d, n) and d.level == logging.DEBUG:
+                debug_log = getattr(d, n)
     return debug_log
+
 
 def exit_error(*args, **kwargs):
     """Exit on error collecting as much information as we can.
@@ -40,50 +42,51 @@ def exit_error(*args, **kwargs):
     as the first argument.
 
     """
-    # Get the root logger 
+    # Get the root logger
     logger = logging.getLogger()
-    
+
     # An error may have occured before we started logging so we need to create one here
     if not logger.handlers:
         logging.basicConfig(format='%(message)s\n', level=logging.DEBUG)
         logger = logging.getLogger()
 
-    
     exc_type, exc_value, exc_traceback = sys.exc_info()
     msg = kwargs.get('message')
     if msg is None:
-        if len(args) >= 1: # Fix for old cases
+        if len(args) >= 1:  # Fix for old cases
             msg = args[0]
         else:
             msg = "{0}: {1}".format(exc_type.__name__, exc_value.message)
 
-    #header="**** AMPLE ERROR ****\n\n"
-    header="*"*70 + "\n"
-    header+="*"*20 + " "*10 + "AMPLE ERROR" + " "*10 +"*"*19 + "\n" 
-    header+="*"*70 + "\n\n"
-    
-    # Create the Footer 
-    footer="\n\n" + "*"*70+"\n\n"
-    
+    # header="**** AMPLE ERROR ****\n\n"
+    header = "*" * 70 + "\n"
+    header += "*" * 20 + " " * 10 + "AMPLE ERROR" + " " * 10 + "*" * 19 + "\n"
+    header += "*" * 70 + "\n\n"
+
+    # Create the Footer
+    footer = "\n\n" + "*" * 70 + "\n\n"
+
     # Get the name of the debug log file
     debug_log = _debug_logfile(logger)
-    if debug_log: footer += "More information may be found in the debug log file: {0}\n".format(debug_log) 
-    
+    if debug_log:
+        footer += "More information may be found in the debug log file: {0}\n".format(debug_log)
+
     footer += "\nIf you believe that this is an error with AMPLE, please email: ccp4@stfc.ac.uk\n"
     footer += "providing as much information as you can about how you ran the program.\n"
-    if debug_log: footer += "\nPlease include the debug logfile with your email: {0}\n".format(debug_log)   
-    
+    if debug_log:
+        footer += "\nPlease include the debug logfile with your email: {0}\n".format(debug_log)
+
     # String it all together
     msg = header + msg + footer
-    
+
     # Print out main message
     logger.critical(msg)
-    
+
     # If we were called without an exception being raised, we just print the current stack
     if exc_traceback is None:
         traceback_str = "".join(traceback.format_stack())
     else:
-        traceback_str =     "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+        traceback_str = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
 
     msg = "AMPLE EXITING AT2..." + os.linesep + traceback_str
     if debug_log:
@@ -91,10 +94,9 @@ def exit_error(*args, **kwargs):
     else:
         # If we don't have a debug file we want to output the traceback to the console
         logger.info(msg)
-    
+
     # Make sure the error widget is updated
-    if pyrvapi: pyrvapi.rvapi_flush()
-    
+    if pyrvapi:
+        pyrvapi.rvapi_flush()
+
     sys.exit(1)
-  
-                 

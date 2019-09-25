@@ -14,7 +14,8 @@ import unittest
 
 import iotbx.file_reader
 import iotbx.pdb
-#iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
+
+# iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
 
 import ample_util
 import pdb_model
@@ -42,11 +43,11 @@ three2one = {
     'TRP': 'W',
     'TYR': 'Y',
     'VAL': 'V',
-    'UNK': 'X'
+    'UNK': 'X',
 }
 
 # http://stackoverflow.com/questions/3318625/efficient-bidirectional-hash-table-in-python
-#aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
+# aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
 one2three = dict((v, k) for (k, v) in three2one.items())
 
 logger = logging.getLogger(__name__)
@@ -112,7 +113,7 @@ def calpha_only(inpdb, outpdb):
 
 
 def chain_id_is_blank(chain):
-    return (isinstance(chain.id, str) and len(chain.id.strip()) == 0)
+    return isinstance(chain.id, str) and len(chain.id.strip()) == 0
 
 
 def extract_chain(inpdb, outpdb, chainID=None, newChainID=None, cAlphaOnly=False, renumber=True):
@@ -158,13 +159,15 @@ def extract_model(inpdb, outpdb, modelID):
 
 def extract_header_pdb_code(pdb_input):
     for line in pdb_input.title_section():
-        if line.startswith("HEADER ") and len(line) >= 65: return line[62:66]
+        if line.startswith("HEADER ") and len(line) >= 65:
+            return line[62:66]
     return None
 
 
 def extract_header_title(pdb_input):
     for line in pdb_input.title_section():
-        if line.startswith('TITLE'): return line[10:-1].strip()
+        if line.startswith('TITLE'):
+            return line[10:-1].strip()
     return None
 
 
@@ -224,9 +227,11 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
         rnames = [x.name for x in refAtomList]
 
         if len(refAtomList) > len(targetAtomList):
-            raise RuntimeError("Cannot keep matching as refAtomList is > targetAtomList for residue {}\nRef: {}\nTrg: {}".format(
-                targetResSeq, rnames, [x.name for x in targetAtomList]
-            ))
+            raise RuntimeError(
+                "Cannot keep matching as refAtomList is > targetAtomList for residue {}\nRef: {}\nTrg: {}".format(
+                    targetResSeq, rnames, [x.name for x in targetAtomList]
+                )
+            )
 
         # Remove any not matching in the target
         alist = []
@@ -344,7 +349,7 @@ def _keep_matching(refpdb=None, targetpdb=None, outpdb=None, resSeqMap=None):
         # For time being exclude all HETATM lines
         elif line.startswith("HETATM"):
             continue
-        #Endif line.startswith("ATOM")
+        # Endif line.startswith("ATOM")
 
         # Output everything else
         out.write(line)
@@ -420,7 +425,7 @@ def get_info(inpath):
                         except ValueError:
                             # Leave as None
                             pass
-        #End REMARK
+        # End REMARK
 
         if line.startswith("CRYST1"):
             try:
@@ -577,6 +582,7 @@ def match_resseq(targetPdb=None, outPdb=None, resMap=None, sourcePdb=None):
                 continue
             out.write(line)
 
+
 def merge_chains(pdbin, pdbout, chains=None):
     """Merge pdb chains.
     
@@ -602,9 +608,10 @@ def merge_chains(pdbin, pdbout, chains=None):
     hout = _merge_chains(hin, chains=chains)
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:{}\n".format(pdbin))
-        f.write(hout.as_pdb_string(anisou=False))    
-        
+        f.write(hout.as_pdb_string(anisou=False))
+
     return pdbout
+
 
 def _merge_chains(hierarchy, chains=None):
     """Merge pdb chains in hierarchy.
@@ -625,7 +632,9 @@ def _merge_chains(hierarchy, chains=None):
     # Make sure we can find the required chain ids
     chain_ids = [chain.id for chain in hierarchy.models()[0].chains()]
     if chains:
-        chains = copy.copy(chains) # Make sure we're not altering the given arg so we can be called multiple times in a loop
+        chains = copy.copy(
+            chains
+        )  # Make sure we're not altering the given arg so we can be called multiple times in a loop
         assert isinstance(chains, list) and len(chains) > 1, "Need list of more than one chain {}".format(chains)
         root_chain_id = chains.pop(0)
         if root_chain_id not in chain_ids:
@@ -635,7 +644,7 @@ def _merge_chains(hierarchy, chains=None):
     else:
         # append all chains to the first chain
         root_chain_id = hierarchy.models()[0].chains()[0].id
-    
+
     root_chain_idx = chain_ids.index(root_chain_id)
     root_chain = hierarchy.models()[0].chains()[root_chain_idx].detached_copy()
     for i, chain in enumerate(hierarchy.models()[0].chains()):
@@ -647,14 +656,15 @@ def _merge_chains(hierarchy, chains=None):
             continue
         for r in chain.residue_groups():
             root_chain.append_residue_group(r.detached_copy())
-        
+
     new_model = iotbx.pdb.hierarchy.model()
     new_model.append_chain(root_chain)
     new_hierarchy = iotbx.pdb.hierarchy.root()
-    new_hierarchy.append_model((new_model))     
+    new_hierarchy.append_model((new_model))
     _renumber(new_hierarchy)
-        
+
     return new_hierarchy
+
 
 def merge(pdb1=None, pdb2=None, pdbout=None):
     """Merge two pdb files into one"""
@@ -683,9 +693,9 @@ def num_atoms_and_residues(pdbin, first=False):
     """"Return number of atoms and residues in a pdb file.
     If all is True, return all atoms and residues, else just for the first chain in the first model'
     """
-    #pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
-    #model = pdb_obj.hierarchy.models()[0]
-    #return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
+    # pdb_obj = iotbx.pdb.hierarchy.input(file_name=pdbin)
+    # model = pdb_obj.hierarchy.models()[0]
+    # return sum(  [ len( chain.residues() ) for chain in model.chains() ]  )
 
     if not first:
         logfile = "rwcontents.log"
@@ -718,7 +728,8 @@ def _only_equal_sizes(hierarchy):
         logger.debug('All models were not of the same length, only {0} will be kept.'.format(len(to_keep)))
         # Delete any that are not of most numerous length
         for i, model in enumerate(hierarchy.models()):
-            if i not in to_keep: hierarchy.remove_model(model)
+            if i not in to_keep:
+                hierarchy.remove_model(model)
     return hierarchy
 
 
@@ -730,7 +741,7 @@ def _parse_rwcontents(logfile):
         for line in f:
             if line.startswith(" Number of amino-acids residues"):
                 nresidues = int(line.strip().split()[5])
-            #Total number of protein atoms (including hydrogens)
+            # Total number of protein atoms (including hydrogens)
             if line.startswith(" Total number of         atoms (including hydrogens)"):
                 natoms = int(float(line.strip().split()[6]))
             if line.startswith(" Molecular Weight of protein:"):
@@ -769,13 +780,16 @@ COLUMNS        DATA TYPE     FIELD       DEFINITION
         idCode = line[7:11]
         resName = line[12:15].strip()
         # Use for all so None means an empty field
-        if line[16].strip(): chainID = line[16]
+        if line[16].strip():
+            chainID = line[16]
         seqNum = int(line[18:22])
         iCode = ""
-        if line[22].strip(): iCode = line[22]
+        if line[22].strip():
+            iCode = line[22]
         stdRes = line[24:27].strip()
         comment = ""
-        if line[29:70].strip(): comment = line[29:70].strip()
+        if line[29:70].strip():
+            comment = line[29:70].strip()
 
         modres.append([idCode, resName, chainID, seqNum, iCode, stdRes, comment])
 
@@ -806,7 +820,7 @@ def reliable_sidechains(inpath=None, outpath=None):
         # Write out everything else
         pdb_out.write(pdbline)
 
-    #End for
+    # End for
     pdb_out.close()
     pdb_in.close()
 
@@ -851,9 +865,11 @@ def rename_chains(inpdb=None, outpdb=None, fromChain=None, toChain=None):
         allChain = toChain
     else:
         if len(fromChain) != len(toChain):
-            raise RuntimeError("rename_chains either needs a single to_chain or two list of equal length.\n"
-                               "Got fromChain \'{}\' toChain: \'{}\'".format(fromChain, toChain))
-    
+            raise RuntimeError(
+                "rename_chains either needs a single to_chain or two list of equal length.\n"
+                "Got fromChain \'{}\' toChain: \'{}\'".format(fromChain, toChain)
+            )
+
     logfile = outpdb + ".log"
     cmd = "pdbcur xyzin {0} xyzout {1}".format(inpdb, outpdb).split()
     if allChain:
@@ -945,21 +961,23 @@ def select_residues(pdbin, pdbout, delete=None, tokeep=None, delete_idx=None, to
     pdbf.check_file_type("pdb")
     hierarchy = pdbf.file_object.construct_hierarchy()
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
-    
+
     if len(hierarchy.models()) > 1 or len(hierarchy.models()[0].chains()) > 1:
         logger.debug("pdb %s has > 1 model or chain - only first model/chain will be kept", pdbin)
 
     hierarchy = _select_residues(hierarchy, delete=delete, tokeep=tokeep, delete_idx=delete_idx, tokeep_idx=tokeep_idx)
-    #hierarchy.write_pdb_file(pdbout,anisou=False)
+    # hierarchy.write_pdb_file(pdbout,anisou=False)
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:\n")
         f.write("REMARK   {0}\n".format(pdbin))
-        if (crystal_symmetry is not None):
+        if crystal_symmetry is not None:
             f.write(
-                iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry,
-                                                          write_scale_records=True) + "\n")
+                iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry, write_scale_records=True)
+                + "\n"
+            )
         f.write(hierarchy.as_pdb_string(anisou=False))
     return
+
 
 def _select_residues(hierarchy, delete=None, tokeep=None, delete_idx=None, tokeep_idx=None):
     if len(hierarchy.models()) > 1:
@@ -969,13 +987,14 @@ def _select_residues(hierarchy, delete=None, tokeep=None, delete_idx=None, tokee
     model = hierarchy.models()[0]
     if len(model.chains()) > 1:
         for i, c in enumerate(model.chains()):
-            if i != 0: model.remove_chain(c)
+            if i != 0:
+                model.remove_chain(c)
     chain = model.chains()[0]
     idx = -1
     for residue_group in chain.residue_groups():
         # We ignore hetatms when indexing as we are concerned with residue indexes
         if (delete_idx or tokeep_idx) and any([atom.hetero for atom in residue_group.atoms()]):
-                continue
+            continue
         idx += 1
         remove = False
         if delete and residue_group.resseq_as_int() in delete:
@@ -989,6 +1008,7 @@ def _select_residues(hierarchy, delete=None, tokeep=None, delete_idx=None, tokee
         if remove:
             chain.remove_residue_group(residue_group)
     return hierarchy
+
 
 def sequence(pdbin):
     return _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
@@ -1059,7 +1079,7 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
         os.mkdir(directory)
 
     # Largely stolen from pdb_split_models.py in phenix
-    #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
+    # http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
 
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
@@ -1076,24 +1096,23 @@ def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
         k += 1
         new_hierarchy = iotbx.pdb.hierarchy.root()
         new_hierarchy.append_model(model.detached_copy())
-        if strip_hetatm: _strip(
-                new_hierarchy,
-                hetatm=True,
-        )
-        if (model.id == ""):
+        if strip_hetatm:
+            _strip(new_hierarchy, hetatm=True)
+        if model.id == "":
             model_id = str(k)
         else:
             model_id = model.id.strip()
         output_file = ample_util.filename_append(pdbin, model_id, directory)
         with open(output_file, "w") as f:
-            if (crystal_symmetry is not None):
+            if crystal_symmetry is not None:
                 f.write(
                     iotbx.pdb.format_cryst1_and_scale_records(
                         crystal_symmetry=crystal_symmetry, write_scale_records=True
-                    ) + '\n'
+                    )
+                    + '\n'
                 )
             f.write("REMARK Model %d of %d\n" % (k, n_models))
-            if (pdbin is not None):
+            if pdbin is not None:
                 f.write('REMARK Original file:\n')
                 f.write('REMARK   %s\n' % pdbin)
             f.write(new_hierarchy.as_pdb_string())
@@ -1108,14 +1127,14 @@ def split_into_chains(pdbin, chain=None, directory=None):
         directory = os.path.dirname(pdbin)
 
     # Largely stolen from pdb_split_models.py in phenix
-    #http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
+    # http://cci.lbl.gov/cctbx_sources/iotbx/command_line/pdb_split_models.py
     pdbf = iotbx.file_reader.any_file(pdbin, force_type="pdb")
     pdbf.check_file_type("pdb")
     hierarchy = pdbf.file_object.construct_hierarchy()
 
     # Nothing to do
     n_models = hierarchy.models_size()
-    if n_models != 1: 
+    if n_models != 1:
         raise RuntimeError("split_into_chains only works with single-mdoel pdbs!")
 
     crystal_symmetry = pdbf.file_object.crystal_symmetry()
@@ -1133,21 +1152,22 @@ def split_into_chains(pdbin, chain=None, directory=None):
         new_model.append_chain(hchain.detached_copy())
         output_file = ample_util.filename_append(pdbin, hchain.id, directory)
         with open(output_file, "w") as f:
-            if (crystal_symmetry is not None):
+            if crystal_symmetry is not None:
                 f.write(
                     iotbx.pdb.format_cryst1_and_scale_records(
                         crystal_symmetry=crystal_symmetry, write_scale_records=True
-                    ) + '\n'
+                    )
+                    + '\n'
                 )
             f.write('REMARK Chain %d of %d\n' % (i, n_chains))
-            if (pdbin is not None):
+            if pdbin is not None:
                 f.write('REMARK Original file:\n')
                 f.write('REMARK   %s\n' % pdbin)
             f.write(new_hierarchy.as_pdb_string())
 
         output_files.append(output_file)
 
-    if not len(output_files): 
+    if not len(output_files):
         raise RuntimeError("split_into_chains could not find any chains to split")
 
     return output_files
@@ -1167,12 +1187,13 @@ noanisou
 mostprob
 """
     # We are extracting one  of the chains
-    if chain: stdin += "lvchain {0}\n".format(chain)
+    if chain:
+        stdin += "lvchain {0}\n".format(chain)
 
     retcode = ample_util.run_command(cmd=cmd, logfile=logfile, directory=os.getcwd(), dolog=False, stdin=stdin)
-    if retcode == 0: 
+    if retcode == 0:
         os.unlink(logfile)
-    else: 
+    else:
         raise RuntimeError("Error standardising pdb!")
 
     # Standardise AA names and then remove any remaining HETATMs
@@ -1190,8 +1211,7 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
     crystal_symmetry = pdb_input.crystal_symmetry()
 
     # Get MODRES Section & build up dict mapping the changes
-    modres_text = [ l.strip() for l in pdb_input.primary_structure_section() \
-                    if l.startswith("MODRES")]
+    modres_text = [l.strip() for l in pdb_input.primary_structure_section() if l.startswith("MODRES")]
     modres = {}
     for id, resname, chain, resseq, icode, stdres, comment in _parse_modres(modres_text):
         if not chain in modres:
@@ -1207,22 +1227,25 @@ def std_residues_cctbx(pdbin, pdbout, del_hetatm=False):
                     resname = atom_group.resname
                     if chain.id in modres and resseq in modres[chain.id] and modres[chain.id][resseq][0] == resname:
                         # Change modified name to std name
-                        #assert modres[chain.id][resseq][0]==resname,\
-                        #"Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
+                        # assert modres[chain.id][resseq][0]==resname,\
+                        # "Unmatched names: {0} : {1}".format(modres[chain.id][resseq][0],resname)
                         atom_group.resname = modres[chain.id][resseq][1]
                         # If any of the atoms are hetatms, set them to be atoms
                         for atom in atom_group.atoms():
-                            if atom.hetero: atom.hetero = False
+                            if atom.hetero:
+                                atom.hetero = False
 
-    if del_hetatm: _strip(hierachy, hetatm=True)
+    if del_hetatm:
+        _strip(hierachy, hetatm=True)
 
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:\n")
         f.write("REMARK   {0}\n".format(pdbin))
-        if (crystal_symmetry is not None):
+        if crystal_symmetry is not None:
             f.write(
-                iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry, write_scale_records=True) +
-                "\n")
+                iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry, write_scale_records=True)
+                + "\n"
+            )
         f.write(hierachy.as_pdb_string(anisou=False))
     return
 
@@ -1239,10 +1262,11 @@ def strip(pdbin, pdbout, hetatm=False, hydrogen=False, atom_types=[]):
     with open(pdbout, 'w') as f:
         f.write("REMARK Original file:\n")
         f.write("REMARK   {0}\n".format(pdbin))
-        if (crystal_symmetry is not None):
+        if crystal_symmetry is not None:
             f.write(
-                iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry, write_scale_records=True) +
-                "\n")
+                iotbx.pdb.format_cryst1_and_scale_records(crystal_symmetry=crystal_symmetry, write_scale_records=True)
+                + "\n"
+            )
         f.write(hierachy.as_pdb_string(anisou=False))
     return
 
@@ -1258,12 +1282,14 @@ def _strip(hierachy, hetatm=False, hydrogen=False, atom_types=[]):
             for residue_group in chain.residue_groups():
                 for atom_group in residue_group.atom_groups():
                     to_del = [
-                        a for a in atom_group.atoms()
+                        a
+                        for a in atom_group.atoms()
                         if remove_atom(a, hetatm=hetatm, hydrogen=hydrogen, atom_types=atom_types)
                     ]
                     for atom in to_del:
                         atom_group.remove_atom(atom)
     return
+
 
 def translate(inpdb=None, outpdb=None, ftranslate=None):
     """translate pdb
@@ -1284,6 +1310,7 @@ def translate(inpdb=None, outpdb=None, ftranslate=None):
     else:
         raise RuntimeError("Error translating PDB")
 
+
 def xyz_coordinates(pdbin):
     ''' Extract xyz for all atoms '''
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
@@ -1302,6 +1329,7 @@ def _xyz_coordinates(hierarchy):
             tmp = []
 
     return res_lst
+
 
 def xyz_cb_coordinates(pdbin):
     ''' Extract xyz for CA/CB atoms '''
@@ -1341,18 +1369,22 @@ def _xyz_atom_coords(atom_group):
         if atom.name.strip() in set(["CA", "CB"]):
             tmp_dict[atom.name.strip()] = atom.xyz
 
-    if 'CB' in tmp_dict: return tmp_dict['CB']
-    elif 'CA' in tmp_dict: return tmp_dict['CA']
-    else: return (float('inf'), float('inf'), float('inf'))
+    if 'CB' in tmp_dict:
+        return tmp_dict['CB']
+    elif 'CA' in tmp_dict:
+        return tmp_dict['CA']
+    else:
+        return (float('inf'), float('inf'), float('inf'))
 
 
 if __name__ == "__main__":
-    #unittest.TextTestRunner(verbosity=2).run(testSuite())
+    # unittest.TextTestRunner(verbosity=2).run(testSuite())
     #
     # Command-line handling
     #
-    #unittest.TextTestRunner(verbosity=2).run(testSuite())
+    # unittest.TextTestRunner(verbosity=2).run(testSuite())
     import argparse
+
     parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
 
     group = parser.add_mutually_exclusive_group()
@@ -1369,7 +1401,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.test:
-        print(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__]))
+        print (unittest.TestLoader().loadTestsFromModule(sys.modules[__name__]))
         sys.exit(unittest.TextTestRunner().run(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])))
 
     # Get full paths to all files
@@ -1388,10 +1420,10 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file, del_hetatm=True, chain=args.chain)
     elif args.seq:
-        print(sequence_util.Sequence(pdb=args.input_file).fasta_str())
+        print (sequence_util.Sequence(pdb=args.input_file).fasta_str())
     elif args.split_models:
-        print(split_pdb(args.input_file))
+        print (split_pdb(args.input_file))
     elif args.split_chains:
-        print(split_into_chains(args.input_file, chain=args.chain))
+        print (split_into_chains(args.input_file, chain=args.chain))
     elif args.chain:
-        print(extract_chain(args.input_file, args.output_file, chainID=args.chain))
+        print (extract_chain(args.input_file, args.output_file, chainID=args.chain))

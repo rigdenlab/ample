@@ -24,117 +24,117 @@ logger = logging.getLogger(__name__)
 # otherwise we cannot manage interplay between
 # ConfigParser and AMPLE settings dictionary.
 # Some default non-dynamic parts are stored below to avoid errors
-_SECTIONS_REFERENCE = {"AMPLE_info": ["ample_version",
-                                      "ccp4_version",
-                                      "cmdline_flags"],
-
-                       "Databases": ['nr',
-                                     'rosetta_db'],
-                       
-                       "Ensembling": [],
-
-                       "Executables": ['blast_dir',
-                                       'cluster_exe',
-                                       'fast_protein_cluster_exe',
-                                       'gesamt_exe',
-                                       'mustang_exe',
-                                       'rosetta_dir',
-                                       'rosetta_fragments_exe',
-                                       'rosetta_executable',
-                                       'scwrl_exe',
-                                       'shelxe_exe',
-                                       'spicker_exe',
-                                       'theseus_exe'],
-
-                       "Files": ['alignment_file',
-                                 'ample_log',
-                                 'bbcontacts_file',
-                                 'cluster_dir',
-                                 'config_file',
-                                 'contact_file',
-                                 'disulfide_constraints_file',
-                                 'ensembles',
-                                 'ensembles_directory',
-                                 'ensemble_ok',
-                                 'existing_mr_solution',
-                                 'fasta',
-                                 'frags_3mers',
-                                 'frags_9mers',
-                                 'models',
-                                 'models_dir',
-                                 'mrbump_dir',
-                                 'mr_sequence',
-                                 'mtz',
-                                 'native_pdb',
-                                 'native_mtz',
-                                 'nmr_model_in',
-                                 'nmr_remodel_fasta',
-                                 'out_config_file',
-                                 'psipred_ss2',
-                                 'restart_pkl',
-                                 'restraints_file',
-                                 'results_path',
-                                 'score_matrix',
-                                 'score_matrix_file_list',
-                                 'sf_cif',
-                                 'single_model',
-                                 'transmembrane_octopusfile',
-                                 'transmembrane_lipofile',
-                                 'transmembrane_spanfile',
-                                 'truncation_scorefile',
-                                 'work_dir'],
-                       
-                       "General": [],
-                       
-                       
-                       "Modelling": [],
-                       
-                       "Restraints": [],
-                       
-                       # Data stored in amopt.d but not really part of AMPLE's configuration
-                       "No_config": ["benchmark_results",
-                                     "ensembles_data",
-                                     "fasta_length",
-                                     "mrbump_results",
-                                     "sequence",
-                                     "truncation_variances",
-                                     "truncation_levels",
-                                     "truncation_nresidues"],
-                       # In case we haven't specified anything or it is new
-                       "Unspecified": [],
-                       }
+_SECTIONS_REFERENCE = {
+    "AMPLE_info": ["ample_version", "ccp4_version", "cmdline_flags"],
+    "Databases": ['nr', 'rosetta_db'],
+    "Ensembling": [],
+    "Executables": [
+        'blast_dir',
+        'cluster_exe',
+        'fast_protein_cluster_exe',
+        'gesamt_exe',
+        'mustang_exe',
+        'rosetta_dir',
+        'rosetta_fragments_exe',
+        'rosetta_executable',
+        'scwrl_exe',
+        'shelxe_exe',
+        'spicker_exe',
+        'theseus_exe',
+    ],
+    "Files": [
+        'alignment_file',
+        'ample_log',
+        'bbcontacts_file',
+        'cluster_dir',
+        'config_file',
+        'contact_file',
+        'disulfide_constraints_file',
+        'ensembles',
+        'ensembles_directory',
+        'ensemble_ok',
+        'existing_mr_solution',
+        'fasta',
+        'frags_3mers',
+        'frags_9mers',
+        'models',
+        'models_dir',
+        'mrbump_dir',
+        'mr_sequence',
+        'mtz',
+        'native_pdb',
+        'native_mtz',
+        'nmr_model_in',
+        'nmr_remodel_fasta',
+        'out_config_file',
+        'psipred_ss2',
+        'restart_pkl',
+        'restraints_file',
+        'results_path',
+        'score_matrix',
+        'score_matrix_file_list',
+        'sf_cif',
+        'single_model',
+        'transmembrane_octopusfile',
+        'transmembrane_lipofile',
+        'transmembrane_spanfile',
+        'truncation_scorefile',
+        'work_dir',
+    ],
+    "General": [],
+    "Modelling": [],
+    "Restraints": [],
+    # Data stored in amopt.d but not really part of AMPLE's configuration
+    "No_config": [
+        "benchmark_results",
+        "ensembles_data",
+        "fasta_length",
+        "mrbump_results",
+        "sequence",
+        "truncation_variances",
+        "truncation_levels",
+        "truncation_nresidues",
+    ],
+    # In case we haven't specified anything or it is new
+    "Unspecified": [],
+}
 
 
 class DebugDict(dict):
     """A Dictionary class that prints when watched items are set or accessed"""
+
     def __init__(self, *args, **kwargs):
         dict.__init__(self, args)
         self.watchkeys = []
         if 'watchkeys' in kwargs:
             watchkeys = kwargs['watchkeys']
-            if not isinstance(watchkeys, list): list(watchkeys)
+            if not isinstance(watchkeys, list):
+                list(watchkeys)
             self.watchkeys = watchkeys
 
     def __getitem__(self, key):
         val = dict.__getitem__(self, key)
         if key in self.watchkeys:
             logger.info("AMOPT GET {0}['{1}'] = {2}".format(dict.get(self, 'name_label'), key, val))
-            logger.info("AMOPT STACK:\n{0}".format(os.linesep.join(traceback.format_list(traceback.extract_stack())[:-1])))
+            logger.info(
+                "AMOPT STACK:\n{0}".format(os.linesep.join(traceback.format_list(traceback.extract_stack())[:-1]))
+            )
         return val
 
     def __setitem__(self, key, val):
         if key in self.watchkeys:
             logger.info("AMOPT SET {0}['{1}'] = {2}".format(dict.get(self, 'name_label'), key, val))
-            logger.info("AMOPT STACK:\n{0}".format(os.linesep.join(traceback.format_list(traceback.extract_stack())[:-1])))
+            logger.info(
+                "AMOPT STACK:\n{0}".format(os.linesep.join(traceback.format_list(traceback.extract_stack())[:-1]))
+            )
         dict.__setitem__(self, key, val)
 
 
 class AMPLEConfigOptions(object):
-
     def __init__(self):
 
-        self.d = {} # Can't use defaultdict as need lambda function to return None, which won't pickle
-        #self.d = DebugDict(watchkeys=['models'])
+        self.d = {}  # Can't use defaultdict as need lambda function to return None, which won't pickle
+        # self.d = DebugDict(watchkeys=['models'])
         self.cmdline_opts = {}
         self.debug = False
 
@@ -165,7 +165,7 @@ class AMPLEConfigOptions(object):
             'shelx_cycles': 5,
             'refine_rebuild_arpwarp': False,
             'refine_rebuild_buccaneer': False,
-            'phaser_kill': 15
+            'phaser_kill': 15,
         }
 
         self.webserver_uri = {
@@ -197,11 +197,9 @@ class AMPLEConfigOptions(object):
         return
 
     def _get_config_file(self, cmd_file=None):
-        config_file = os.path.abspath(
-            cmd_file) if cmd_file else AMPLE_CONFIG_FILE
+        config_file = os.path.abspath(cmd_file) if cmd_file else AMPLE_CONFIG_FILE
         if not os.path.isfile(config_file):
-            msg = "Cannot find configuration file: {0} - terminating...".format(
-                config_file)
+            msg = "Cannot find configuration file: {0} - terminating...".format(config_file)
             logger.critical(msg)
             raise RuntimeError(msg)
         logger.debug("Using configuration file: {0}".format(config_file))
@@ -254,15 +252,12 @@ class AMPLEConfigOptions(object):
         for k, v in getattr(self, mode).iteritems():
             if 'cmdline_flags' in self.d and k in self.d['cmdline_flags']:
                 if self.d[k] == v:
-                    msg = 'WARNING! {0} flag {1} => {2} was duplicated on the command line!'.format(
-                        mode, v, k)
+                    msg = 'WARNING! {0} flag {1} => {2} was duplicated on the command line!'.format(mode, v, k)
                 else:
-                    msg = "WARNING! Overriding {0} setting: {1} => {2} with {3}".format(
-                        mode, k, v, self.d[k])
+                    msg = "WARNING! Overriding {0} setting: {1} => {2} with {3}".format(mode, k, v, self.d[k])
                 logger.critical(msg)
             elif k in self.d:
-                logger.debug("{0} overriding default setting: {1} => {2} with {3}".format(
-                    mode, k, v, self.d[k]))
+                logger.debug("{0} overriding default setting: {1} => {2} with {3}".format(mode, k, v, self.d[k]))
                 self.d[k] = v
             else:
                 logger.debug("{0} setting: {1} => {2}".format(mode, k, v))
@@ -345,8 +340,7 @@ class AMPLEConfigOptions(object):
         self._update_config(config)
         if config_file is None:
             # Can be None for testing
-            config_file = os.path.join(
-                self.d['work_dir'], self.d['name'] + ".ini")
+            config_file = os.path.join(self.d['work_dir'], self.d['name'] + ".ini")
         # Write config to job specific directory
         self.d["out_config_file"] = config_file
         logger.info("AMPLE configuration written to: {0}".format(config_file))
@@ -365,8 +359,9 @@ class AMPLEConfigOptions(object):
         # the configparser
         for option in sorted(self.d.keys()):
             # Extract the section in which the entry needs to go
-            sections = [k for (k, v) in _SECTIONS_REFERENCE.items()
-                        if any(entry.lower() == option.lower() for entry in v)]
+            sections = [
+                k for (k, v) in _SECTIONS_REFERENCE.items() if any(entry.lower() == option.lower() for entry in v)
+            ]
 
             # Make sure we only have each option assigned to a single section
             section = "Unspecified" if len(sections) != 1 else sections[0]
@@ -375,9 +370,7 @@ class AMPLEConfigOptions(object):
             # Comment those specifically out to avoid any errors
             if section.lower() == "no_config":
                 continue
-            elif section.lower() == "ample_info" or \
-                    section.lower() == "files" or \
-                    section.lower() == "unspecified":
+            elif section.lower() == "ample_info" or section.lower() == "files" or section.lower() == "unspecified":
                 config_parser.set(section, "#" + option, str(self.d[option]))
             else:
                 config_parser.set(section, option, str(self.d[option]))

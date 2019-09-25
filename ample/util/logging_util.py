@@ -9,23 +9,25 @@ from ample.constants import AMPLE_LOGGER_CONFIG
 
 class LogColors(Enum):
     """Color container for log messages"""
+
     CRITICAL = 31
     DEBUG = 34
     DEFAULT = 0
     ERROR = 31
     WARNING = 33
- 
- 
+
+
 class LogColorFormatter(logging.Formatter):
     """Formatter for log messages"""
-    def format(self, record):   
+
+    def format(self, record):
         if record.levelname in LogColors.__members__:
             prefix = '\033[1;{}m'.format(LogColors[record.levelname].value)
             postfix = '\033[{}m'.format(LogColors["DEFAULT"].value)
             record.msg = os.linesep.join([prefix + msg + postfix for msg in str(record.msg).splitlines()])
         return logging.Formatter.format(self, record)
- 
- 
+
+
 def setup_logging(argso):
     """Read JSON config for logger and return root logger
     
@@ -39,11 +41,10 @@ def setup_logging(argso):
         argso['ample_log'] = os.path.abspath(config['handlers']['file_handler']['filename'])
     except KeyError:
         argso['ample_log'] = None
-    return logging.getLogger()   
+    return logging.getLogger()
 
 
-def setup_console_logging(level=logging.INFO,
-                          formatstr='%(message)s\n'):
+def setup_console_logging(level=logging.INFO, formatstr='%(message)s\n'):
     """
     Set up logging to the console - required for the individual modules.
     
@@ -67,14 +68,13 @@ def setup_console_logging(level=logging.INFO,
     except TypeError:
         cl = logging.StreamHandler(stream=sys.stdout)
     cl.setLevel(level)
-    formatter = logging.Formatter(formatstr) 
+    formatter = logging.Formatter(formatstr)
     cl.setFormatter(formatter)
     logger.addHandler(cl)
     return logger
 
-def setup_file_logging(logfile,
-                       level=logging.DEBUG,
-                       formatstr='%(asctime)s - %(name)s - %(levelname)s - %(message)s'):
+
+def setup_file_logging(logfile, level=logging.DEBUG, formatstr='%(asctime)s - %(name)s - %(levelname)s - %(message)s'):
     """
     Set up logging to a file - required for the individual modules.
     

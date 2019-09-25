@@ -1,6 +1,6 @@
 import os
 
-if "CCP4" not in os.environ.keys(): 
+if "CCP4" not in os.environ.keys():
     msg = "Cannot find CCP4 root directory"
     raise RuntimeError(msg)
 

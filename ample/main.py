@@ -62,21 +62,23 @@ class Ample(object):
         self.setup_workdir(argso)
         global logger
         logger = logging_util.setup_logging(argso)
-        
+
         # Logging and work directories in place so can start work
         self.amopt = amopt = config_util.AMPLEConfigOptions()
         amopt.populate(argso)
         amopt.d = self.setup(amopt.d)
         rosetta_modeller = options_processor.process_rosetta_options(amopt.d)
-        logger.debug(amopt.prettify_parameters()) # Display the parameters used
+        logger.debug(amopt.prettify_parameters())  # Display the parameters used
         amopt.write_config_file()
         time_start = time.time()
         if self.ample_output:
+
             def monitor():
                 return self.ample_output.display_results(amopt.d)
+
         else:
             monitor = None
-            
+
         # Process any files we may have been given
         model_results = process_models.extract_and_validate_models(amopt.d)
         if model_results:
@@ -91,7 +93,8 @@ class Ample(object):
             amopt.d['modelling_workdir'] = nmr_mdir
             logger.info('Splitting NMR ensemble into constituent models in directory: {0}'.format(nmr_mdir))
             amopt.d['processed_models'] = pdb_edit.split_pdb(
-                amopt.d['nmr_model_in'], directory=nmr_mdir, strip_hetatm=True, same_size=True)
+                amopt.d['nmr_model_in'], directory=nmr_mdir, strip_hetatm=True, same_size=True
+            )
             logger.info('NMR ensemble contained {0} models'.format(len(amopt.d['processed_models'])))
 
         # Modelling business happens here
@@ -115,9 +118,7 @@ class Ample(object):
         elapsed_time = time_stop - time_start
         run_in_min = elapsed_time / 60
         run_in_hours = run_in_min / 60
-        msg = os.linesep + \
-            'All processing completed  (in {0:6.2F} hours)'.format(
-                run_in_hours) + os.linesep
+        msg = os.linesep + 'All processing completed  (in {0:6.2F} hours)'.format(run_in_hours) + os.linesep
         msg += '----------------------------------------' + os.linesep
         logging.info(msg)
 
@@ -141,7 +142,7 @@ class Ample(object):
         if self.ample_output:
             self.ample_output.display_results(amopt.d)
             self.ample_output.rvapi_shutdown(amopt.d)
-        
+
         self.cleanup(amopt.d)
         return
 
@@ -162,21 +163,24 @@ class Ample(object):
                 submit_pe_lsf=optd['submit_pe_lsf'],
                 submit_pe_sge=optd['submit_pe_sge'],
                 submit_array=optd['submit_array'],
-                submit_max_array=optd['submit_max_array'])
+                submit_max_array=optd['submit_max_array'],
+            )
             # queue finished so unpickle results
             optd.update(ample_util.read_amoptd(optd['results_path']))
         else:
             benchmark_util.analyse(optd)
             ample_util.save_amoptd(optd)
         return
-    
+
     @staticmethod
     def cleanup(optd):
         """Remove directories based on purge level
         """
         purge_level = optd['purge']
-        to_remove = {1 : ['modelling_workdir', 'ensembles_workdir'],
-                     2 : ['models_dir', 'ensembles_directory', 'contacts_dir']}
+        to_remove = {
+            1: ['modelling_workdir', 'ensembles_workdir'],
+            2: ['models_dir', 'ensembles_directory', 'contacts_dir'],
+        }
         for level in to_remove.keys():
             if purge_level >= level:
                 for wdir in to_remove[level]:
@@ -185,7 +189,7 @@ class Ample(object):
         if purge_level >= 2:
             mrbump_util.purge_MRBUMP(optd)
         return
-    
+
     def handle_contacts(self, optd):
         if optd["use_contacts"] and not optd['restraints_file']:
             con_util = contact_util.ContactUtil(
@@ -196,8 +200,9 @@ class Ample(object):
                 bbcontacts_file=optd['bbcontacts_file'],
                 bbcontacts_format=optd["bbcontacts_format"],
                 cutoff_factor=optd['restraints_factor'],
-                distance_to_neighbor=optd['distance_to_neighbour'])
-    
+                distance_to_neighbor=optd['distance_to_neighbour'],
+            )
+
             optd["contacts_dir"] = os.path.join(optd["work_dir"], "contacts")
             if not os.path.isdir(optd["contacts_dir"]):
                 os.mkdir(optd["contacts_dir"])
@@ -206,7 +211,7 @@ class Ample(object):
                     con_util.predict_contacts_from_sequence(wdir=optd["contacts_dir"])
                     optd["contact_file"] = con_util.contact_file
                     optd["contact_format"] = con_util.contact_format
-    
+
             if con_util.do_contact_analysis:
                 plot_file = os.path.join(optd['contacts_dir'], optd['name'] + ".cm.png")
                 if optd['native_pdb'] and optd['native_pdb_std']:
@@ -215,20 +220,22 @@ class Ample(object):
                     structure_file = optd['native_std']
                 else:
                     structure_file = None
-                optd['contact_map'], optd['contact_ppv'] = con_util.summarize(plot_file, structure_file, 'pdb',
-                                                                              optd['native_cutoff'])
+                optd['contact_map'], optd['contact_ppv'] = con_util.summarize(
+                    plot_file, structure_file, 'pdb', optd['native_cutoff']
+                )
                 restraints_file = os.path.join(optd['contacts_dir'], optd['name'] + ".cst")
-                optd['restraints_file'] = con_util.write_restraints(restraints_file, optd['restraints_format'],
-                                                                    optd['energy_function'])
+                optd['restraints_file'] = con_util.write_restraints(
+                    restraints_file, optd['restraints_format'], optd['energy_function']
+                )
             else:
                 con_util = None
         else:
             con_util = None
         return con_util
-        
+
     def modelling_required(self, optd):
-        return (optd['make_frags'] or optd['make_models'] or optd['nmr_remodel'])
-    
+        return optd['make_frags'] or optd['make_models'] or optd['nmr_remodel']
+
     def ensembling(self, optd):
         if optd['import_ensembles']:
             ensembler.import_ensembles(optd)
@@ -259,7 +266,8 @@ class Ample(object):
                     submit_pe_lsf=optd['submit_pe_lsf'],
                     submit_pe_sge=optd['submit_pe_sge'],
                     submit_array=optd['submit_array'],
-                    submit_max_array=optd['submit_max_array'])
+                    submit_max_array=optd['submit_max_array'],
+                )
                 # queue finished so unpickle results
                 optd.update(ample_util.read_amoptd(optd['results_path']))
             else:
@@ -315,7 +323,7 @@ class Ample(object):
             logger.info('----- making Rosetta models--------')
             logger.info('Making %s models...', optd['nmodels'])
             try:
-                optd['processed_models'] = rosetta_modeller.ab_initio_model(processed_models = optd['processed_models'])
+                optd['processed_models'] = rosetta_modeller.ab_initio_model(processed_models=optd['processed_models'])
             except Exception as e:
                 msg = "Error running ROSETTA to create models: {0}".format(e)
                 exit_util.exit_error(msg, sys.exc_info()[2])
@@ -324,7 +332,9 @@ class Ample(object):
         # Sub-select the decoys using contact information
         if con_util and optd['subselect_mode'] and not (optd['nmr_model_in'] or optd['nmr_remodel']):
             logger.info('Subselecting models from directory using provided contact information')
-            subselect_data = con_util.subselect_decoys(optd['processed_models'], 'pdb', mode=optd['subselect_mode'], **optd)
+            subselect_data = con_util.subselect_decoys(
+                optd['processed_models'], 'pdb', mode=optd['subselect_mode'], **optd
+            )
             optd['processed_models'] = zip(*subselect_data)[0]
             optd['subselect_data'] = dict(subselect_data)
 
@@ -356,7 +366,8 @@ class Ample(object):
             logger.info("Sorting ensembles")
             sort_keys = ['cluster_num', 'truncation_level', 'subcluster_radius_threshold', 'side_chain_treatment']
             ensemble_pdbs_sorted = ensembler.sort_ensembles(
-                optd['ensembles'], optd['ensembles_data'], keys=sort_keys, prioritise=True)
+                optd['ensembles'], optd['ensembles_data'], keys=sort_keys, prioritise=True
+            )
 
             # Create job scripts
             logger.info("Generating MRBUMP runscripts")
@@ -365,15 +376,18 @@ class Ample(object):
                 optd,
                 job_time=mrbump_util.MRBUMP_RUNTIME,
                 ensemble_options=optd['ensemble_options'],
-                directory=bump_dir)
+                directory=bump_dir,
+            )
 
         # Create function for monitoring jobs - static function decorator?
         if self.ample_output:
+
             def monitor():
                 r = mrbump_util.ResultsSummary()
                 r.extractResults(optd['mrbump_dir'], purge=bool(optd['purge']))
                 optd['mrbump_results'] = r.results
                 return self.ample_output.display_results(optd)
+
         else:
             monitor = None
 
@@ -396,11 +410,14 @@ class Ample(object):
             submit_pe_lsf=optd['submit_pe_lsf'],
             submit_pe_sge=optd['submit_pe_sge'],
             submit_array=optd['submit_array'],
-            submit_max_array=optd['submit_max_array'])
+            submit_max_array=optd['submit_max_array'],
+        )
 
         if not ok:
-            msg = "An error code was returned after running MRBUMP on the ensembles!\n" + \
-                  "For further information check the logs in directory: {0}".format(optd['mrbump_dir'])
+            msg = (
+                "An error code was returned after running MRBUMP on the ensembles!\n"
+                + "For further information check the logs in directory: {0}".format(optd['mrbump_dir'])
+            )
             logger.critical(msg)
 
         # Collect the MRBUMP results
@@ -410,7 +427,7 @@ class Ample(object):
         ample_util.save_amoptd(optd)
         summary = mrbump_util.finalSummary(optd)
         logger.info(summary)
-        
+
     def process_models(self, optd):
         process_models.extract_and_validate_models(optd)
         # Need to check if Quark and handle things accordingly
@@ -420,8 +437,7 @@ class Ample(object):
                 optd['use_scwrl'] = True
             else:
                 # No SCWRL so don't do owt with the side chains
-                logger.info('Using QUARK models but SCWRL is not installed '
-                            'so only using %s sidechains', UNMODIFIED)
+                logger.info('Using QUARK models but SCWRL is not installed ' 'so only using %s sidechains', UNMODIFIED)
                 optd['side_chain_treatments'] = [UNMODIFIED]
         ample_util.save_amoptd(optd)
 
@@ -478,10 +494,10 @@ class Ample(object):
                 # With JSCOFE we run in the run directory
                 argso['work_dir'] = argso['run_dir']
             else:
-                argso['work_dir'] = ample_util.make_workdir(argso['run_dir'],
-                                                            ccp4i2=bool(argso['ccp4i2_xml']))
+                argso['work_dir'] = ample_util.make_workdir(argso['run_dir'], ccp4i2=bool(argso['ccp4i2_xml']))
         os.chdir(argso['work_dir'])
         return argso['work_dir']
+
 
 if __name__ == "__main__":
     try:

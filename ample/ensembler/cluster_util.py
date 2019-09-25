@@ -61,7 +61,7 @@ def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
        Cannot find random clusters
 
     """
-    if len(models) <= max_cluster_size + 50: # completely arbitary number
+    if len(models) <= max_cluster_size + 50:  # completely arbitary number
         raise RuntimeError('Cannot randomly cluster so few models')
 
     i = 0
@@ -79,7 +79,7 @@ def random_cluster(cluster_method, max_cluster_size, models, num_clusters):
         cluster.method = cluster_method
         cluster.num_clusters = num_clusters
         cluster.index = i + 1
-        cluster.models = list(cmodels) # convert list back to set
+        cluster.models = list(cmodels)  # convert list back to set
 
         clusters.append(cluster)
         i += 1

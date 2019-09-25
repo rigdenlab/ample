@@ -10,8 +10,16 @@ import os
 import shutil
 
 from ample.constants import AMPLE_PKL
-from ample.ensembler.constants import  SUBCLUSTER_RADIUS_THRESHOLDS, SIDE_CHAIN_TREATMENTS, \
-    ALLOWED_SIDE_CHAIN_TREATMENTS, SPICKER_RMSD, SPICKER_TM, POLYALA, RELIABLE, ALLATOM
+from ample.ensembler.constants import (
+    SUBCLUSTER_RADIUS_THRESHOLDS,
+    SIDE_CHAIN_TREATMENTS,
+    ALLOWED_SIDE_CHAIN_TREATMENTS,
+    SPICKER_RMSD,
+    SPICKER_TM,
+    POLYALA,
+    RELIABLE,
+    ALLATOM,
+)
 from ample.modelling import rosetta_model
 from ample.util import ample_util
 from ample.util import contact_util
@@ -87,11 +95,12 @@ def process_benchmark_options(optd):
         else:
             optd['have_tmscore'] = True
 
-      
+
 def process_ensemble_options(optd):
     from ample.ensembler.truncation_util import TRUNCATION_METHODS
+
     if optd['single_model_mode'] and optd['truncation_scorefile'] and optd['truncation_scorefile_header']:
-        #optd['truncation_method'] = "scores"
+        # optd['truncation_method'] = "scores"
         optd['truncation_method'] = TRUNCATION_METHODS.SCORES
     elif optd['percent_fixed_intervals']:
         optd['truncation_method'] = TRUNCATION_METHODS.PERCENT_FIXED
@@ -99,9 +108,12 @@ def process_ensemble_options(optd):
         try:
             optd['truncation_method'] = TRUNCATION_METHODS(optd['truncation_method'])
         except ValueError:
-            raise RuntimeError("{} is not a valid truncation method. Use one of: {}".format(optd['truncation_method'],
-                                                                                            [e.value for e in TRUNCATION_METHODS]))
-        
+            raise RuntimeError(
+                "{} is not a valid truncation method. Use one of: {}".format(
+                    optd['truncation_method'], [e.value for e in TRUNCATION_METHODS]
+                )
+            )
+
     # Check we can find all the required programs
     if optd['subcluster_program'] == 'gesamt':
         if not optd['gesamt_exe']:
@@ -128,7 +140,9 @@ def process_ensemble_options(optd):
         try:
             optd['fast_protein_cluster_exe'] = ample_util.find_exe(optd['fast_protein_cluster_exe'])
         except ample_util.FileNotFoundError:
-            raise RuntimeError("Cannot find fast_protein_cluster executable: {0}".format(optd['fast_protein_cluster_exe']))
+            raise RuntimeError(
+                "Cannot find fast_protein_cluster executable: {0}".format(optd['fast_protein_cluster_exe'])
+            )
     elif optd['cluster_method'] in ['import', 'random', 'skip']:
         pass
     else:
@@ -161,7 +175,7 @@ def process_ensemble_options(optd):
         optd["side_chain_treatments"] = map(str.lower, optd["side_chain_treatments"])
     unrecognised_sidechains = set(optd["side_chain_treatments"]) - set(ALLOWED_SIDE_CHAIN_TREATMENTS)
     if unrecognised_sidechains:
-        raise("Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains))
+        raise ("Unrecognised side_chain_treatments: {0}".format(unrecognised_sidechains))
     return
 
 
@@ -184,7 +198,7 @@ def process_options(optd):
         optd['mr_sequence'] = optd['fasta']
     # Process the fasta file and run all the checks on the sequence
     sequence_util.process_fasta(optd, canonicalise=True)
-    
+
     # Not sure if name actually required - see make_fragments.pl
     if optd['name'] and len(optd['name']) != 4:
         raise RuntimeError('-name argument is the wrong length, use 4 chars eg ABCD')
@@ -216,7 +230,9 @@ def process_options(optd):
     if optd['submit_qtype']:
         optd['submit_qtype'] = optd['submit_qtype'].upper()
     if optd['submit_cluster'] and not optd['submit_qtype']:
-        raise RuntimeError('Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.')
+        raise RuntimeError(
+            'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
+        )
     try:
         optd['purge'] = int(optd['purge'])
     except (ValueError, KeyError):
@@ -259,17 +275,25 @@ def process_modelling_options(optd):
                 if not ample_util.is_exe(str(optd['gesamt_exe'])):
                     optd['gesamt_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'gesamt' + ample_util.EXE_EXT)
                 if not ample_util.is_exe(str(optd['gesamt_exe'])):
-                    raise RuntimeError('Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(
-                        optd['gesamt_exe']))
+                    raise RuntimeError(
+                        'Using homologs without an alignment file and cannot find gesamt_exe: {0}'.format(
+                            optd['gesamt_exe']
+                        )
+                    )
             elif optd['homolog_aligner'] == 'mustang':
                 if not ample_util.is_exe(str(optd['mustang_exe'])):
-                    raise RuntimeError('Using homologs without an alignment file and cannot find mustang_exe: {0}'.format(
-                        optd['mustang_exe']))
+                    raise RuntimeError(
+                        'Using homologs without an alignment file and cannot find mustang_exe: {0}'.format(
+                            optd['mustang_exe']
+                        )
+                    )
             else:
                 raise RuntimeError('Unknown homolog_aligner: {0}'.format(optd['homolog_aligner']))
         if not os.path.isdir(str(optd['models'])):
-            raise RuntimeError("Homologs option requires a directory of pdb models to be supplied\n" + \
-                              "Please supply the models with the -models flag")
+            raise RuntimeError(
+                "Homologs option requires a directory of pdb models to be supplied\n"
+                + "Please supply the models with the -models flag"
+            )
         optd['import_models'] = True
     elif optd['models']:
         if not os.path.exists(optd['models']):
@@ -299,7 +323,8 @@ def process_modelling_options(optd):
             else:
                 optd['nmr_remodel_fasta'] = optd['fasta']
             msg = "NMR model will be remodelled with ROSETTA using the sequence from: {0}".format(
-                optd['nmr_remodel_fasta'])
+                optd['nmr_remodel_fasta']
+            )
             logger.info(msg)
             if not (optd['frags_3mers'] and optd['frags_9mers']):
                 optd['make_frags'] = True
@@ -307,8 +332,11 @@ def process_modelling_options(optd):
                 logger.info(msg)
             else:
                 if not (os.path.isfile(optd['frags_3mers']) and os.path.isfile(optd['frags_9mers'])):
-                    raise RuntimeError("frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
-                        optd['frags_3mers'], optd['frags_9mers']))
+                    raise RuntimeError(
+                        "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
+                            optd['frags_3mers'], optd['frags_9mers']
+                        )
+                    )
                 optd['make_frags'] = False
         else:
             optd['make_frags'] = False
@@ -321,8 +349,11 @@ def process_modelling_options(optd):
         # If the user has given both fragment files we check they are ok and unset make_frags
         if optd['frags_3mers'] and optd['frags_9mers']:
             if not os.path.isfile(optd['frags_3mers']) or not os.path.isfile(optd['frags_9mers']):
-                raise RuntimeError("frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
-                    optd['frags_3mers'], optd['frags_9mers']))
+                raise RuntimeError(
+                    "frags_3mers and frag_9mers files given, but cannot locate them:\n{0}\n{1}\n".format(
+                        optd['frags_3mers'], optd['frags_9mers']
+                    )
+                )
             optd['make_frags'] = False
         if optd['make_frags'] and (optd['frags_3mers'] or optd['frags_9mers']):
             raise RuntimeError("make_frags set to true, but you have given the path to the frags_3mers or frags_9mers")
@@ -366,20 +397,24 @@ def process_mr_options(optd):
 
     # Disable all rebuilding if the resolution is too poor
     if optd['mtz_min_resolution'] >= mrbump_util.REBUILD_MAX_PERMITTED_RESOLUTION:
-        logger.warn("!!! Disabling all rebuilding as maximum resolution of %f is too poor!!!".format(optd['mtz_min_resolution']))
+        logger.warn(
+            "!!! Disabling all rebuilding as maximum resolution of %f is too poor!!!".format(optd['mtz_min_resolution'])
+        )
         optd['use_shelxe'] = False
         optd['shelxe_rebuild'] = False
         optd['shelxe_rebuild_arpwarp'] = False
         optd['shelxe_rebuild_buccaneer'] = False
         optd['refine_rebuild_arpwarp'] = False
         optd['refine_rebuild_buccaneer'] = False
-        
+
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
         if optd['mtz_min_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
-            logger.warn("Disabling use of SHELXE as min resolution of %f is < accepted limit of %f",
-                        optd['mtz_min_resolution'],
-                        mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION)
+            logger.warn(
+                "Disabling use of SHELXE as min resolution of %f is < accepted limit of %f",
+                optd['mtz_min_resolution'],
+                mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION,
+            )
             optd['use_shelxe'] = False
             optd['shelxe_rebuild'] = False
     if optd['use_shelxe']:
@@ -398,9 +433,11 @@ def process_mr_options(optd):
     if optd['shelxe_rebuild']:
         optd['shelxe_rebuild_arpwarp'] = True
         optd['shelxe_rebuild_buccaneer'] = True
-        
+
     # If shelxe_rebuild is set we need use_shelxe to be set
-    if (optd['shelxe_rebuild'] or optd['shelxe_rebuild_arpwarp']  or optd['shelxe_rebuild_buccaneer']) and not optd['use_shelxe']:
+    if (optd['shelxe_rebuild'] or optd['shelxe_rebuild_arpwarp'] or optd['shelxe_rebuild_buccaneer']) and not optd[
+        'use_shelxe'
+    ]:
         raise RuntimeError('shelxe_rebuild is set but use_shelxe is False. Please make sure you have shelxe installed.')
 
     if optd['refine_rebuild_arpwarp'] or optd['shelxe_rebuild_arpwarp']:
@@ -474,7 +511,7 @@ def process_restart_options(optd):
     # Go through and see what we need to do
     # Reset all variables for doing stuff - otherwise we will always restart from the earliest point
     optd['make_ensembles'] = False
-    #optd['import_ensembles'] = False # Needs thinking about - have to set so we don't just reimport models/ensembles
+    # optd['import_ensembles'] = False # Needs thinking about - have to set so we don't just reimport models/ensembles
     optd['import_models'] = False  # Needs thinking about
     optd['make_models'] = False
     optd['make_frags'] = False

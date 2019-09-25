@@ -2,11 +2,12 @@
 
 import locale
 import sys
+
 # Below causes issues in some locales and noone knows why it was included so commenting out for now
-#locale.setlocale(locale.LC_NUMERIC, "")
+# locale.setlocale(locale.LC_NUMERIC, "")
+
 
 class Table:
-
     def format_num(self, num):
         """Format a number according to given places.
         Adds commas, etc. Will truncate floats into ints!"""
@@ -20,13 +21,11 @@ class Table:
                 return locale.format("%.*f", (0, inum), True)
 
         except (ValueError, TypeError):
-            return num.encode('utf-8') if isinstance(num,unicode) else str(num)
-
+            return num.encode('utf-8') if isinstance(num, unicode) else str(num)
 
     def get_max_width(self, table, index):
         """Get the maximum width of the given column index"""
         return max([len(self.format_num(row[index])) for row in table])
-
 
     def pprint_table(self, table):
         """Prints out a table of data, padded for alignment
@@ -44,18 +43,17 @@ class Table:
             # rest of the cols
             for i in range(1, len(row)):
                 col = self.format_num(row[i]).rjust(col_paddings[i] + 2)
-                out +=  col
+                out += col
             out += "\n"
 
         return out
 
 
 if __name__ == "__main__":
-    T=Table()
+    T = Table()
     T.bumppath = '/home/jmht/ample-dev1/examples/toxd-example/ROSETTA_MR_3/MRBUMP/cluster_run1'
     T.cluster = True
     table = T.maketable()
     out = sys.stdout
     T.pprint_table(out, table)
-    print('done')
-
+    print ('done')

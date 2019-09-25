@@ -49,7 +49,8 @@ class Spickerer(object):
         if not len(models):
             raise RuntimeError("no models provided!")
 
-        if score_type: score_type = score_type.lower()
+        if score_type:
+            score_type = score_type.lower()
         logger.debug("Using score_type: {0}".format(score_type))
 
         if score_type == 'read_matrix':
@@ -58,11 +59,11 @@ class Spickerer(object):
             logger.debug("Using score_matrix: {0}".format(score_matrix))
             shutil.copy(score_matrix, os.path.join(self.run_dir, 'score.matrix'))
 
-# read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
-#
-# file_list - a list of the full path of all PDBs - used so we can loop through it and copy the selected
-# ones to the relevant directory after we have run spicker - the order of these must match the order
-# of the structures in the rep1.tra1 file
+        # read_out - Input file for spicker with coordinates of the CA atoms for each of the PDB structures
+        #
+        # file_list - a list of the full path of all PDBs - used so we can loop through it and copy the selected
+        # ones to the relevant directory after we have run spicker - the order of these must match the order
+        # of the structures in the rep1.tra1 file
         list_string = ''
         counter = 0
         with open('rep1.tra1', "w") as read_out, open('file_list', "w") as file_list:
@@ -122,14 +123,9 @@ class Spickerer(object):
                         seq.write('\t' + split[5] + '\t' + split[3] + '\n')
         return
 
-    def cluster(self,
-                models,
-                num_clusters=10,
-                max_cluster_size=200,
-                run_dir=None,
-                score_type='rmsd',
-                score_matrix=None,
-                nproc=1):
+    def cluster(
+        self, models, num_clusters=10, max_cluster_size=200, run_dir=None, score_type='rmsd', score_matrix=None, nproc=1
+    ):
         """Cluster decoys using spicker
 
         Parameters
@@ -166,10 +162,14 @@ class Spickerer(object):
         self._cluster(models, run_dir=run_dir, score_type=score_type, score_matrix=score_matrix, nproc=nproc)
 
         ns_clusters = len(self.results)
-        if ns_clusters == 0: 
+        if ns_clusters == 0:
             raise RuntimeError('No clusters returned by SPICKER')
         if ns_clusters < int(num_clusters):
-            logger.critical('Requested {0} clusters but SPICKER only found {1} so using {1} clusters'.format(num_clusters, ns_clusters))
+            logger.critical(
+                'Requested {0} clusters but SPICKER only found {1} so using {1} clusters'.format(
+                    num_clusters, ns_clusters
+                )
+            )
             num_clusters = ns_clusters
 
         clusters = []
@@ -221,6 +221,7 @@ class Spickerer(object):
 
             def set_stack():
                 import resource
+
                 stack_bytes = 50000000  # 50Mb
                 resource.setrlimit(resource.RLIMIT_STACK, (stack_bytes, stack_bytes))
 
@@ -243,7 +244,8 @@ class Spickerer(object):
 
         We use the R_nat value to order the files in the cluster
         """
-        if not logfile: logfile = os.path.join(self.run_dir, 'str.txt')
+        if not logfile:
+            logfile = os.path.join(self.run_dir, 'str.txt')
         clusterCounts = []
         index2rcens = []
 
@@ -300,7 +302,7 @@ class Spickerer(object):
             with open(pdb_file, "w") as f:
                 for i, (idx, rcen) in enumerate(index2rcens[cluster]):
                     pdb = pdb_list[idx - 1]
-                    #if i == 0: result.cluster_centroid = pdb
+                    # if i == 0: result.cluster_centroid = pdb
                     result.models.append(pdb)
                     result.r_cen.append(rcen)
                     f.write(pdb + "\n")
@@ -310,14 +312,14 @@ class Spickerer(object):
     def results_summary(self):
         """Summarise the spicker results"""
 
-        if not self.results: 
+        if not self.results:
             raise RuntimeError("Could not find any results!")
         rstr = "---- Spicker Results ----\n\n"
 
         for i, r in enumerate(self.results):
             rstr += "Cluster: {0}\n".format(i + 1)
             rstr += "* number of models: {0}\n".format(r.size)
-            #rstr += "* files are listed in file: {0}\n".format(r.pdb_file)
+            # rstr += "* files are listed in file: {0}\n".format(r.pdb_file)
             rstr += "* centroid model is: {0}\n".format(r.centroid)
             rstr += "\n"
 
@@ -326,6 +328,7 @@ class Spickerer(object):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--executable', help="spicker executable to use")
     parser.add_argument('-m', '--models', required=True, help="Models to cluster")
@@ -344,7 +347,7 @@ if __name__ == "__main__":
             models = [l.strip() for l in f.readlines() if l.strip()]
 
     if len(models) < 1:
-        print("Cannot find any pdbs in: {0}".format(models))
+        print ("Cannot find any pdbs in: {0}".format(models))
         sys.exit(1)
 
     spicker_exe = os.path.abspath(args.executable) if args.executable else None
@@ -354,4 +357,4 @@ if __name__ == "__main__":
 
     spicker = Spickerer(spicker_exe=spicker_exe)
     spicker.cluster(models, score_type=args.score_type, nproc=args.threads)
-    print(spicker.results_summary())
+    print (spicker.results_summary())

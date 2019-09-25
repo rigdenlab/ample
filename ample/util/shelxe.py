@@ -18,7 +18,7 @@ try:
     from mrbump.parsers import parse_shelxe
 except ImportError:
     mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
-    sys.path.insert(0,mrbumpd)
+    sys.path.insert(0, mrbumpd)
     import parse_shelxe
 
 
@@ -41,6 +41,7 @@ class MRinfo(object):
       The weighted Mean Phase Error of the MR pdb to the native pdb
 
     """
+
     def __init__(self, shelxe_exe, native_pdb, native_mtz, work_dir=None):
         """Intialise from native pdb and mtz so that analyse only requires a MR pdb
 
@@ -60,7 +61,7 @@ class MRinfo(object):
         self.MPE = None
         self.wMPE = None
         self.originShift = None
-        
+
         self.mk_native_files(native_pdb, native_mtz)
         return
 
@@ -94,9 +95,9 @@ class MRinfo(object):
         input_pdb = self.stem + ".pda"
         shutil.copyfile(mr_pdb, os.path.join(self.work_dir, input_pdb))
         cmd = [self.shelxe_exe, input_pdb, '-a0', '-q', '-s0.5', '-o', '-n', '-t0', '-m0', '-x']
-        logfile = os.path.abspath('shelxe_{}.log'.format( str(uuid.uuid1())))
+        logfile = os.path.abspath('shelxe_{}.log'.format(str(uuid.uuid1())))
         ret = ample_util.run_command(cmd=cmd, logfile=logfile, directory=None, dolog=False, stdin=None)
-        if ret != 0: 
+        if ret != 0:
             raise RuntimeError("Error running shelxe - see log: {0}".format(logfile))
         sp = parse_shelxe.ShelxeLogParser(logfile)
         # Only added in later version of MRBUMP shelxe parser
@@ -104,14 +105,15 @@ class MRinfo(object):
             self.MPE = sp.MPE
         self.wMPE = sp.wMPE
         if isinstance(sp.originShift, list):
-            self.originShift = [ o*-1 for o in sp.originShift ]
+            self.originShift = [o * -1 for o in sp.originShift]
         if cleanup:
-            for ext in ['.hkl', '.ent', '.pda','.pdo','.phs','.lst','_trace.ps']:
+            for ext in ['.hkl', '.ent', '.pda', '.pdo', '.phs', '.lst', '_trace.ps']:
                 try:
                     os.unlink(self.stem + ext)
                 except:
                     pass
             os.unlink(logfile)
+
 
 if __name__ == "__main__":
 
@@ -119,6 +121,7 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
 
     import argparse
+
     parser = argparse.ArgumentParser(description='Determine origin using SHELXE', prefix_chars="-")
     parser.add_argument('--native_mtz', help='Native MTZ', required=True)
     parser.add_argument('--native_pdb', help='Native PDB', required=True)
@@ -130,7 +133,7 @@ if __name__ == "__main__":
     if args.executable:
         executable = args.executable
     else:
-        executable = os.path.join(os.environ['CCP4'],"bin","shelxe" + ample_util.EXE_EXT)
+        executable = os.path.join(os.environ['CCP4'], "bin", "shelxe" + ample_util.EXE_EXT)
 
     # Get full paths to all files
     native_mtz = os.path.abspath(args.native_mtz)
@@ -147,5 +150,5 @@ if __name__ == "__main__":
     mrinfo.analyse(mr_pdb)
     os.unlink('shelxe-input.hkl')
     os.unlink('shelxe-input.ent')
-    print("Origin shift is: {0}".format(mrinfo.originShift))
-    print("Phase error is MPE: {0} | wMPE: {1}".format(mrinfo.originShift, mrinfo.MPE, mrinfo.wMPE))
+    print ("Origin shift is: {0}".format(mrinfo.originShift))
+    print ("Phase error is MPE: {0} | wMPE: {1}".format(mrinfo.originShift, mrinfo.MPE, mrinfo.wMPE))

@@ -185,15 +185,17 @@ class ContactUtil(object):
 
     """
 
-    def __init__(self,
-                 sequence_file,
-                 sequence_format,
-                 contact_file=None,
-                 contact_format=None,
-                 bbcontacts_file=None,
-                 bbcontacts_format="bbcontacts",
-                 cutoff_factor=1.0,
-                 distance_to_neighbor=5):
+    def __init__(
+        self,
+        sequence_file,
+        sequence_format,
+        contact_file=None,
+        contact_format=None,
+        bbcontacts_file=None,
+        bbcontacts_format="bbcontacts",
+        cutoff_factor=1.0,
+        distance_to_neighbor=5,
+    ):
         """Initialise a new :obj:`ContactUtil` instance
 
         Parameters
@@ -237,6 +239,7 @@ class ContactUtil(object):
 
     def predict_contacts_from_sequence(self, wdir=".", min_neff=200):
         from conkit.applications import CCMpredCommandline, HHblitsCommandline
+
         tag = os.path.basename(self.sequence_file).rsplit(".", 1)[0]
         a3m = os.path.join(wdir, tag + ".a3m")
         jon = os.path.join(wdir, tag + ".jon")
@@ -252,7 +255,8 @@ class ContactUtil(object):
             show_all=True,
             cov=60,
             diff='inf',
-            maxfilt=500000)()
+            maxfilt=500000,
+        )()
         if conkit.io.read(a3m, "a3m").neff >= min_neff:
             logger.info("More than 200 effective sequences in alignment, " + "predicting contacts ...")
             conkit.io.convert(a3m, "a3m", jon, "jones")
@@ -293,7 +297,7 @@ class ContactUtil(object):
         """
         contact_map = self.contact_map
         M = len(decoys)
-        shortrange, mediumrange, longrange = [0.] * M, [0.] * M, [0.] * M
+        shortrange, mediumrange, longrange = [0.0] * M, [0.0] * M, [0.0] * M
         for i in range(M):
             logger.debug("Computing satisfaction for model %d out of %d", i, M)
 
@@ -462,24 +466,27 @@ class ContactUtil(object):
 
             if restraint_format == 'rosetta':
                 construct = getattr(energy_functions.RosettaFunctionConstructs, energy_function).fget(
-                    energy_functions.RosettaFunctionConstructs)
+                    energy_functions.RosettaFunctionConstructs
+                )
 
                 for contact in contact_map:
                     contact_dict = contact._to_dict()
                     contact_dict['atom1'] = 'CA' if contact.res1 == 'G' else 'CB'
                     contact_dict['atom2'] = 'CA' if contact.res2 == 'G' else 'CB'
                     contact_dict['energy_bonus'] = contact.weight * 15.00
-                    contact_dict['scalar_score'] = contact.scalar_score * \
-                        contact.weight
+                    contact_dict['scalar_score'] = contact.scalar_score * contact.weight
                     contact_dict['sigmoid_cutoff'] = energy_functions.DynamicDistances.cutoff(
-                        contact.res1, contact.res2)
+                        contact.res1, contact.res2
+                    )
                     contact_dict['sigmoid_slope'] = 1.0 / energy_functions.DynamicDistances.percentile(
-                        contact.res1, contact.res2)
+                        contact.res1, contact.res2
+                    )
                     f_out.write(construct.format(**contact_dict) + os.linesep)
 
             elif restraint_format == 'saint2':
                 construct = getattr(energy_functions.Saint2FunctionConstructs, 'DEFAULT').fget(
-                    energy_functions.Saint2FunctionConstructs)
+                    energy_functions.Saint2FunctionConstructs
+                )
 
                 for contact in contact_map:
                     contact_dict = contact._to_dict()
@@ -667,6 +674,7 @@ class ContactUtil(object):
     @property
     def found_ccmpred_contact_prediction_deps(self):
         from ample.util.ample_util import FileNotFoundError
+
         found_ccmpred_exe = False
         found_hhblits_exe = False
         try:

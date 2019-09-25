@@ -27,6 +27,7 @@ from pyjob.misc import make_script
 try:
     from Bio import PDB
     from Bio import SeqIO
+
     BIOPYTHON_AVAILABLE = True
 except ImportError:
     BIOPYTHON_AVAILABLE = False
@@ -36,11 +37,25 @@ logger = logging.getLogger(__name__)
 
 class ModelData(object):
     """Class to store model data"""
-    __slots__ = ('model_name', 'structure_name', 'model_fname', 'structure_fname', 'log_fname', 'tmscore', 'rmsd',
-                 'nr_residues_common', 'gdtts', 'gdtha', 'maxsub', 'seq_id')
 
-    def __init__(self, model_name, structure_name, model_fname, structure_fname, log_fname, tmscore, rmsd,
-                 nr_residues_common):
+    __slots__ = (
+        'model_name',
+        'structure_name',
+        'model_fname',
+        'structure_fname',
+        'log_fname',
+        'tmscore',
+        'rmsd',
+        'nr_residues_common',
+        'gdtts',
+        'gdtha',
+        'maxsub',
+        'seq_id',
+    )
+
+    def __init__(
+        self, model_name, structure_name, model_fname, structure_fname, log_fname, tmscore, rmsd, nr_residues_common
+    ):
         self.model_name = model_name
         self.structure_name = structure_name
         self.model_fname = model_fname
@@ -143,8 +158,7 @@ class TMapps(object):
         """
 
         if len(models) < 1 or len(structures) < 1:
-            msg = 'No model structures provided' if len(models) < 1 else \
-                'No reference structures provided'
+            msg = 'No model structures provided' if len(models) < 1 else 'No reference structures provided'
             logger.critical(msg)
             raise RuntimeError(msg)
 
@@ -177,7 +191,8 @@ class TMapps(object):
             if os.path.isfile(model_pdb) and os.path.isfile(structure_pdb):
                 data_entries.append([model_name, structure_name, model_pdb, structure_pdb])
                 script = make_script(
-                    [self.executable, model_pdb, structure_pdb], prefix="tmscore_", stem=stem, directory=self.tmp_dir)
+                    [self.executable, model_pdb, structure_pdb], prefix="tmscore_", stem=stem, directory=self.tmp_dir
+                )
                 job_scripts.append(script)
                 log_files.append(os.path.splitext(script)[0] + ".log")
             else:
@@ -227,8 +242,9 @@ class TMapps(object):
             return itertools.izip
 
     def _store(self, model_name, structure_name, model_pdb, structure_pdb, logfile, pt):
-        model = ModelData(model_name, structure_name, model_pdb, structure_pdb, logfile, pt.tm, pt.rmsd,
-                          pt.nr_residues_common)
+        model = ModelData(
+            model_name, structure_name, model_pdb, structure_pdb, logfile, pt.tm, pt.rmsd, pt.nr_residues_common
+        )
         if hasattr(pt, 'gdtts'):
             model.gdtts = pt.gdtts
         if hasattr(pt, 'gdtha'):
@@ -484,7 +500,7 @@ class TMscore(TMapps):
 
         model_gaps = self._find_gaps(model_aln)
         structure_gaps = self._find_gaps(structure_aln)
-        
+
         pdb_edit.renumber_residues_gaps(model_pdb, _model_pdb_tmp_stage1, model_gaps)
         pdb_edit.renumber_residues_gaps(structure_pdb, _structure_pdb_tmp_stage1, structure_gaps)
 
@@ -549,7 +565,8 @@ class TMscore(TMapps):
             A list containing per residue information
 
         """
-        if not BIOPYTHON_AVAILABLE: raise RuntimeError("Biopython is not available")
+        if not BIOPYTHON_AVAILABLE:
+            raise RuntimeError("Biopython is not available")
         with warnings.catch_warnings():
             logger.debug("Suppressing BIOPYTHON warnings for PDBParser")
             warnings.simplefilter("ignore")
@@ -646,6 +663,7 @@ def main():
 
     if args.purge and tmapp.tmp_dir:
         from shutil import rmtree
+
         rmtree(tmapp.tmp_dir)
 
     return tmapp.entries

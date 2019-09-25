@@ -20,16 +20,16 @@ def parse_rmsd_sheaf(fh, num_models):
             model_idx = int(fields[0])
             rmsd_txt = fields[2].strip()
             # poke into distance matrix
-            rmsds = [ float(r) for r in rmsd_txt.split() ]
+            rmsds = [float(r) for r in rmsd_txt.split()]
             for j in range(len(rmsds)):
                 if j == model_idx - 1:
                     continue
-                rmsd_matrix[model_idx-1][j] = rmsds[j]
+                rmsd_matrix[model_idx - 1][j] = rmsds[j]
             if model_idx == num_models:
                 reading = -1
 
     # Get consensus from rmsds
-    return [np.sqrt(np.sum(row**2 / len(row))) for row in rmsd_matrix]
+    return [np.sqrt(np.sum(row ** 2 / len(row))) for row in rmsd_matrix]
 
 
 def parse_rmsd_pair(fh):
@@ -69,23 +69,23 @@ def ensemble_rmsds(ensemble, gesamt_exe, mode='sheaf'):
     Currently just for testing"""
 
     num_models = iotbx.pdb.pdb_input(ensemble).construct_hierarchy().models_size()
-     
+
     cmd = '{} '.format(gesamt_exe)
     for i in range(num_models):
-        cmd += '{} -s "/{}/" '.format(ensemble, i+1)
+        cmd += '{} -s "/{}/" '.format(ensemble, i + 1)
     if mode == 'sheaf':
         cmd += ' -sheaf-x'
-     
+
     script = './gesamt.sh'
     logfile = 'gesamt.log'
     with open(script, 'w') as w:
         w.write('#!/bin/bash\n{}\n\n'.format(cmd))
     os.chmod(script, 0o777)
-     
+
     j = Job('local')
     j.submit(script, log=logfile)
     j.wait(interval=1)
-    
+
     assert num_models > 1
     with open(logfile) as fh:
         if mode == 'sheaf':
@@ -112,6 +112,7 @@ def add_phaser_rmsds(ensemble, gesamt_exe):
         fh.writelines(lines)
     os.unlink(ensemble_bak)
     return
+
 
 if __name__ == '__main__':
     add_phaser_rmsds('/Users/jmht/Desktop/c3_t3_r3_polyala.pdb', 'gesamt')

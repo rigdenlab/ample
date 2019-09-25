@@ -10,7 +10,6 @@ from ample.util import contact_util
 
 
 class TestSubselectionAlgorithm(unittest.TestCase):
-
     def test_cutoff_1(self):
         data = [1.0, 0.6, 0.5, 0.4, 0.4, 0.3, 0.2, 0.1]
         keep, throw = contact_util.SubselectionAlgorithm.cutoff(data)
