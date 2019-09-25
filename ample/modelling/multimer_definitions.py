@@ -84,4 +84,3 @@ FLAGSFILE_STR = """-run:protocol broker
 -constraints:cst_weight 10 
 -constraints:cst_fa_weight 10
 """
-

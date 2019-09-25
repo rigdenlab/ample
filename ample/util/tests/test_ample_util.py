@@ -8,7 +8,6 @@ from ample.constants import AMPLE_PKL, SHARE_DIR
 
 
 class Test(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         cls.thisd = os.path.abspath(os.path.dirname(__file__))
@@ -27,7 +26,10 @@ class Test(unittest.TestCase):
             optd = pickle.load(f)
         d = ample_util.amoptd_fix_path(optd, newroot='/foo/bar')
         self.assertEqual(d['fasta'], '/foo/bar/ampl_.fasta')
-        self.assertEqual(d['mrbump_results'][0]['PHASER_logfile'], '/foo/bar/MRBUMP/search_c1_t69_r3_polyAla_mrbump/data/loc0_ALL_c1_t69_r3_polyAla/unmod/mr/phaser/phaser_loc0_ALL_c1_t69_r3_polyAla_UNMOD.log')
+        self.assertEqual(
+            d['mrbump_results'][0]['PHASER_logfile'],
+            '/foo/bar/MRBUMP/search_c1_t69_r3_polyAla_mrbump/data/loc0_ALL_c1_t69_r3_polyAla/unmod/mr/phaser/phaser_loc0_ALL_c1_t69_r3_polyAla_UNMOD.log',
+        )
 
     def test_extract_tar(self):
         tarfile = os.path.join(self.testfiles_dir, 'result.tar.bz2')

@@ -24,12 +24,16 @@ SCRIPT_EXT = '.bat' if sys.platform.startswith('win') else '.sh'
 EXE_EXT = '.exe' if sys.platform.startswith('win') else ''
 SCRIPT_HEADER = '' if sys.platform.startswith('win') else '#!/bin/bash'
 
-class FileNotFoundError(Exception): pass
+
+class FileNotFoundError(Exception):
+    pass
+
 
 # ample_util is used before anything else so there is no logger available
 # and we need to a Null handler
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
 
 def amoptd_fix_path(optd, newroot):
     """Update all the paths in an AMPLE results dictionary to be rooted at newroot
@@ -41,31 +45,45 @@ def amoptd_fix_path(optd, newroot):
     newroot: str
        Path to the AMPLE root directory (topdir containing MRBUMP dir etc.)
     """
-    #oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
+    # oldroot = os.sep.join(optd['work_dir'].split(os.sep)[:-1])
     oldroot = optd['work_dir']
-    for k in ['benchmark_dir',
-              'native_pdb',
-              'native_pdb_std',
-              'fasta']:
+    for k in ['benchmark_dir', 'native_pdb', 'native_pdb_std', 'fasta']:
         if k in optd and isinstance(optd[k], str):
             optd[k] = optd[k].replace(oldroot, newroot)
 
-    MRBUMP_FILE_KEYS = ['PHASER_logfile', 'PHASER_pdbout', 'PHASER_mtzout',
-                        'REFMAC_logfile', 'REFMAC_pdbout', 'REFMAC_mtzout',
-                        'BUCC_logfile', 'BUCC_pdbout', 'BUCC_mtzout',
-                        'ARP_logfile', 'ARP_pdbout', 'ARP_mtzout',
-                        'SHELXE_logfile', 'SHELXE_pdbout', 'SHELXE_mtzout',
-                        'SXRBUCC_logfile', 'SXRBUCC_pdbout','SXRBUCC_mtzout',
-                        'SXRARP_logfile', 'SXRARP_pdbout', 'SXRARP_mtzout']
+    MRBUMP_FILE_KEYS = [
+        'PHASER_logfile',
+        'PHASER_pdbout',
+        'PHASER_mtzout',
+        'REFMAC_logfile',
+        'REFMAC_pdbout',
+        'REFMAC_mtzout',
+        'BUCC_logfile',
+        'BUCC_pdbout',
+        'BUCC_mtzout',
+        'ARP_logfile',
+        'ARP_pdbout',
+        'ARP_mtzout',
+        'SHELXE_logfile',
+        'SHELXE_pdbout',
+        'SHELXE_mtzout',
+        'SXRBUCC_logfile',
+        'SXRBUCC_pdbout',
+        'SXRBUCC_mtzout',
+        'SXRARP_logfile',
+        'SXRARP_pdbout',
+        'SXRARP_mtzout',
+    ]
     if 'mrbump_results' in optd:
         for r in optd['mrbump_results']:
             for k in MRBUMP_FILE_KEYS:
                 if k in r and isinstance(r[k], str):
                     warnings.warn("FIX MRBUMP BUG buccaneer refine.pdb vs refined.pdb")
                     new = r[k].replace(oldroot, newroot)
-                    #logger.info('Changing amopt entry %s from: %s to: %s', k, old, new)
+                    # logger.info('Changing amopt entry %s from: %s to: %s', k, old, new)
                     r[k] = new
     return optd
+
 
 @contextmanager
 def disable_logging(logger, max_loglevel=logging.CRITICAL):
@@ -88,6 +106,7 @@ def disable_logging(logger, max_loglevel=logging.CRITICAL):
         if previous_level is not None:
             # changed loglevel so reset it
             logger.setLevel(previous_level)
+
 
 def extract_tar(archive, directory=None, filenames=None, suffixes=None):
     """Extract one or more files from a tar file into a specified directory
@@ -237,8 +256,7 @@ def ideal_helices(optd):
     """
     nresidues = optd['fasta_length']
     include_dir = os.path.join(SHARE_DIR, 'include')
-    names = ['polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25',
-             'polyala30', 'polyala35', 'polyala40']
+    names = ['polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25', 'polyala30', 'polyala35', 'polyala40']
     polya_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
 
     ensemble_options = {}
@@ -246,14 +264,12 @@ def ideal_helices(optd):
     pdbs = []
     for name, nres in zip(names, polya_lengths):
         ncopies = nresidues / nres
-        if ncopies < 1: ncopies = 1
-        ensemble_options[name] = {'ncopies' : ncopies}
+        if ncopies < 1:
+            ncopies = 1
+        ensemble_options[name] = {'ncopies': ncopies}
         pdb = os.path.join(include_dir, "{0}.pdb".format(name))
         # Needed for pyrvapi results
-        ensembles_data.append({'name': name,
-                               'ensemble_pdb': pdb,
-                               'num_residues': nres,
-                                })
+        ensembles_data.append({'name': name, 'ensemble_pdb': pdb, 'num_residues': nres})
         pdbs.append(pdb)
 
     optd['ensembles'] = pdbs
@@ -291,8 +307,7 @@ def is_file(fpath):
     bool
 
     """
-    return fpath and os.path.isfile(fpath) and \
-           os.access(fpath, os.R_OK) and os.stat(fpath).st_size > 0
+    return fpath and os.path.isfile(fpath) and os.access(fpath, os.R_OK) and os.stat(fpath).st_size > 0
 
 
 def make_workdir(run_dir, ccp4i2=False, MAX_WORKDIRS=100):
@@ -323,8 +338,9 @@ def make_workdir(run_dir, ccp4i2=False, MAX_WORKDIRS=100):
             if run_inc > MAX_WORKDIRS:
                 raise RuntimeError("Too many work directories! {0}".format(work_dir))
     if os.path.exists(work_dir):
-        raise RuntimeError("There is an existing AMPLE work directory: {0}\n"
-                           "Please delete/move it aside.".format(work_dir))
+        raise RuntimeError(
+            "There is an existing AMPLE work directory: {0}\n" "Please delete/move it aside.".format(work_dir)
+        )
     os.mkdir(work_dir)
     return work_dir
 
@@ -389,7 +405,7 @@ def run_command(cmd, logfile=None, directory=None, dolog=True, stdin=None, check
         stdin = subprocess.PIPE
     # Windows needs some special treatment
     if os.name == "nt":
-        kwargs.update({'bufsize': 0, 'shell' : "False"})
+        kwargs.update({'bufsize': 0, 'shell': "False"})
     p = subprocess.Popen(cmd, stdin=stdin, stdout=logf, stderr=subprocess.STDOUT, cwd=directory, **kwargs)
 
     if stdin is not None:

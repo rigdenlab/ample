@@ -4,11 +4,11 @@ import unittest
 from ample import constants
 from ample.parsers import tm_parser
 
-class TestTMscore(unittest.TestCase):
 
+class TestTMscore(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        cls.thisd = os.path.abspath(os.path.dirname(__file__))
         cls.ample_share = constants.SHARE_DIR
         cls.testfiles_dir = os.path.join(cls.ample_share, 'testfiles')
 
@@ -23,13 +23,12 @@ class TestTMscore(unittest.TestCase):
         self.assertEqual(0.3147, TM.maxsub)
         self.assertEqual(0.4292, TM.gdtts)
         self.assertEqual(0.2283, TM.gdtha)
-        
+
 
 class TestTMalign(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
-        cls.thisd =  os.path.abspath( os.path.dirname( __file__ ) )
+        cls.thisd = os.path.abspath(os.path.dirname(__file__))
         cls.ample_share = constants.SHARE_DIR
         cls.testfiles_dir = os.path.join(cls.ample_share, 'testfiles')
 

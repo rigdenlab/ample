@@ -14,9 +14,7 @@ from ample.ensembler import subcluster
 from ample.ensembler import subcluster_util
 from ample.ensembler import truncation_util
 
-from ample.ensembler.constants import (
-    SIDE_CHAIN_TREATMENTS, SUBCLUSTER_RADIUS_THRESHOLDS, SPICKER_RMSD, SPICKER_TM
-)
+from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS, SUBCLUSTER_RADIUS_THRESHOLDS, SPICKER_RMSD, SPICKER_TM
 from ample.util import fast_protein_cluster
 from ample.util import scwrl_util
 from ample.util import spicker
@@ -46,7 +44,9 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
         return
 
-    def cluster_models(self, models=None, cluster_method=SPICKER_RMSD, num_clusters=1, cluster_dir=None, max_cluster_size=200):
+    def cluster_models(
+        self, models=None, cluster_method=SPICKER_RMSD, num_clusters=1, cluster_dir=None, max_cluster_size=200
+    ):
         """Wrapper function to run clustering of models dependent on the method"""
         if len(models) < 2:
             raise RuntimeError("Cannot cluster fewer than 2 models!")
@@ -70,32 +70,35 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         if cluster_method_type == 'fast_protein_cluster':
             SCORE_TYPE = 'rmsd'
             CLUSTER_METHOD = 'kmeans'
-            logger.info('Running fast_protein_cluster with: score_type: %s and cluster_method: %s', SCORE_TYPE, CLUSTER_METHOD)
-            clusters = fast_protein_cluster.FPC().fpc.cluster(cluster_method=CLUSTER_METHOD,
-                                                              fpc_exe=cluster_exe,
-                                                              max_cluster_size=max_cluster_size,
-                                                              models=models,
-                                                              num_clusters=num_clusters,
-                                                              nproc=self.nproc,
-                                                              score_type=SCORE_TYPE,
-                                                              work_dir=cluster_dir)
+            logger.info(
+                'Running fast_protein_cluster with: score_type: %s and cluster_method: %s', SCORE_TYPE, CLUSTER_METHOD
+            )
+            clusters = fast_protein_cluster.FPC().fpc.cluster(
+                cluster_method=CLUSTER_METHOD,
+                fpc_exe=cluster_exe,
+                max_cluster_size=max_cluster_size,
+                models=models,
+                num_clusters=num_clusters,
+                nproc=self.nproc,
+                score_type=SCORE_TYPE,
+                work_dir=cluster_dir,
+            )
         elif cluster_method_type == 'import':
             clusters = cluster_util.import_cluster(models)
         elif cluster_method_type == 'random':
-            clusters = cluster_util.random_cluster(cluster_method_type,
-                                                   max_cluster_size,
-                                                   models,
-                                                   num_clusters)
+            clusters = cluster_util.random_cluster(cluster_method_type, max_cluster_size, models, num_clusters)
         elif cluster_method_type == 'spicker':
             logger.info('* Running SPICKER to cluster models *')
             spickerer = spicker.Spickerer(spicker_exe=cluster_exe)
-            clusters = spickerer.cluster(models,
-                                         num_clusters=num_clusters,
-                                         max_cluster_size=max_cluster_size,
-                                         score_type=cluster_score_type,
-                                         run_dir=cluster_dir,
-                                         score_matrix=None,
-                                         nproc=self.nproc)
+            clusters = spickerer.cluster(
+                models,
+                num_clusters=num_clusters,
+                max_cluster_size=max_cluster_size,
+                score_type=cluster_score_type,
+                run_dir=cluster_dir,
+                score_matrix=None,
+                nproc=self.nproc,
+            )
             logger.debug(spickerer.results_summary())
         else:
             raise RuntimeError('Unrecognised clustering method: {}'.format(cluster_method_type))
@@ -119,8 +122,9 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
         cluster_file = self.superpose_models(cluster_files, work_dir=subcluster_dir)
         if not cluster_file:
-            msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(basename,
-                                                                                                             subcluster_dir)
+            msg = "Error running theseus on ensemble {0} in directory: {1}\nSkipping subcluster: {0}".format(
+                basename, subcluster_dir
+            )
             logger.critical(msg)
             return None
 
@@ -151,28 +155,30 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         ensemble.subcluster_num_models = len(cluster_files)
         # Get the centroid model name from the list of files given to theseus - we can't parse
         # the pdb file as theseus truncates the filename
-        ensemble.subcluster_centroid_model =  os.path.abspath(cluster_files[0])
+        ensemble.subcluster_centroid_model = os.path.abspath(cluster_files[0])
         ensemble.subcluster_radius_threshold = radius
         ensemble.subcluster_score = cluster_score
         ensemble.pdb = ensemble_pdb
 
         return ensemble
 
-    def generate_ensembles(self,
-                           models,
-                           cluster_dir=None,
-                           cluster_method=None,
-                           ensembles_directory=None,
-                           ensemble_max_models=None,
-                           num_clusters=None,
-                           percent_truncation=None,
-                           percent_fixed_intervals=None,
-                           side_chain_treatments=SIDE_CHAIN_TREATMENTS,
-                           subcluster_radius_thresholds=SUBCLUSTER_RADIUS_THRESHOLDS,
-                           subcluster_program=None,
-                           truncation_method=None,
-                           truncation_pruning=None,
-                           use_scwrl=False):
+    def generate_ensembles(
+        self,
+        models,
+        cluster_dir=None,
+        cluster_method=None,
+        ensembles_directory=None,
+        ensemble_max_models=None,
+        num_clusters=None,
+        percent_truncation=None,
+        percent_fixed_intervals=None,
+        side_chain_treatments=SIDE_CHAIN_TREATMENTS,
+        subcluster_radius_thresholds=SUBCLUSTER_RADIUS_THRESHOLDS,
+        subcluster_program=None,
+        truncation_method=None,
+        truncation_pruning=None,
+        use_scwrl=False,
+    ):
 
         if not num_clusters:
             num_clusters = self.num_clusters
@@ -188,10 +194,9 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             raise RuntimeError("Problem reading models given to Ensembler: {}".format(models))
 
         self.ensembles = []
-        for cluster in self.cluster_models(models=models,
-                                           cluster_method=cluster_method,
-                                           num_clusters=num_clusters,
-                                           cluster_dir=cluster_dir):
+        for cluster in self.cluster_models(
+            models=models, cluster_method=cluster_method, num_clusters=num_clusters, cluster_dir=cluster_dir
+        ):
             if len(cluster) < 2:
                 logger.warning("Cannot truncate cluster %d as < 2 models!", cluster.index)
                 continue
@@ -208,17 +213,21 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
             self.truncator = truncation_util.Truncator(work_dir=truncate_dir)
             self.truncator.theseus_exe = self.theseus_exe
-            for truncation in self.truncator.truncate_models(models=cluster.models,
-                                                             truncation_method=truncation_method,
-                                                             percent_truncation=percent_truncation,
-                                                             percent_fixed_intervals=percent_fixed_intervals,
-                                                             truncation_pruning=truncation_pruning):
+            for truncation in self.truncator.truncate_models(
+                models=cluster.models,
+                truncation_method=truncation_method,
+                percent_truncation=percent_truncation,
+                percent_fixed_intervals=percent_fixed_intervals,
+                truncation_pruning=truncation_pruning,
+            ):
                 # Add cluster information
                 truncation.cluster = cluster
-                for ensemble in self.subcluster_models(truncation,
-                                                       subcluster_program=subcluster_program,
-                                                       ensemble_max_models=self.ensemble_max_models,
-                                                       radius_thresholds=subcluster_radius_thresholds):
+                for ensemble in self.subcluster_models(
+                    truncation,
+                    subcluster_program=subcluster_program,
+                    ensemble_max_models=self.ensemble_max_models,
+                    radius_thresholds=subcluster_radius_thresholds,
+                ):
                     # Now add the side chains
                     for ensemble in self.edit_side_chains(ensemble, side_chain_treatments):
                         self.ensembles.append(ensemble)
@@ -227,28 +236,28 @@ class AbinitioEnsembler(_ensembler.Ensembler):
     def generate_ensembles_from_amoptd(self, models, amoptd):
         """Generate ensembles from data in supplied ample data dictionary."""
         kwargs = {
-                  'cluster_dir' : amoptd['cluster_dir'],
-                  'cluster_method' : amoptd['cluster_method'],
-                  'num_clusters' : amoptd['num_clusters'],
-                  'percent_fixed_intervals' : amoptd['percent_fixed_intervals'],
-                  'percent_truncation' : amoptd['percent'],
-                  'side_chain_treatments' : amoptd['side_chain_treatments'],
-                  'subcluster_program' : amoptd['subcluster_program'],
-                  'subcluster_radius_thresholds' : amoptd['subcluster_radius_thresholds'],
-                  'truncation_method' : amoptd['truncation_method'],
-                  'truncation_pruning' : amoptd['truncation_pruning'],
-                  'use_scwrl' : amoptd['use_scwrl']
-                  }
+            'cluster_dir': amoptd['cluster_dir'],
+            'cluster_method': amoptd['cluster_method'],
+            'num_clusters': amoptd['num_clusters'],
+            'percent_fixed_intervals': amoptd['percent_fixed_intervals'],
+            'percent_truncation': amoptd['percent'],
+            'side_chain_treatments': amoptd['side_chain_treatments'],
+            'subcluster_program': amoptd['subcluster_program'],
+            'subcluster_radius_thresholds': amoptd['subcluster_radius_thresholds'],
+            'truncation_method': amoptd['truncation_method'],
+            'truncation_pruning': amoptd['truncation_pruning'],
+            'use_scwrl': amoptd['use_scwrl'],
+        }
 
         # strip out any that are None
-        kwargs = { k : v for k, v in kwargs.iteritems() if v is not None }
+        kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
 
         ensembles = self.generate_ensembles(models, **kwargs)
 
         # We need to save these data to amopt as it's impossible to reconstruct otherwise
         amoptd['truncation_levels'] = self.truncator.truncation_levels
         amoptd['truncation_variances'] = self.truncator.truncation_variances
-        amoptd['truncation_nresidues'] =  self.truncator.truncation_nresidues
+        amoptd['truncation_nresidues'] = self.truncator.truncation_nresidues
 
         return ensembles
 
@@ -268,18 +277,22 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             cluster_exe = None
         else:
             raise RuntimeError("Unrecognised cluster_method: {}".format(cluster_method))
-        logger.debug('cluster_method_type: %s cluster_score_type: %s cluster_exe %s', cluster_method_type, cluster_score_type, cluster_exe)
+        logger.debug(
+            'cluster_method_type: %s cluster_score_type: %s cluster_exe %s',
+            cluster_method_type,
+            cluster_score_type,
+            cluster_exe,
+        )
         return cluster_method_type, cluster_score_type, cluster_exe
 
     def scwrl_models(self, models, work_dir, scwrl_exe):
         """Add side chains to the models with Scwrl"""
 
         scwrl_directory = os.path.join(work_dir, "scrwl")
-        if not os.path.isdir(scwrl_directory): os.mkdir(scwrl_directory)
+        if not os.path.isdir(scwrl_directory):
+            os.mkdir(scwrl_directory)
 
-        scwrled_models = scwrl_util.Scwrl(scwrl_exe=scwrl_exe).process_models(models,
-                                                                              scwrl_directory,
-                                                                              strip_oxt=True)
+        scwrled_models = scwrl_util.Scwrl(scwrl_exe=scwrl_exe).process_models(models, scwrl_directory, strip_oxt=True)
         return scwrled_models
 
     def subclusterer_factory(self, subcluster_program):
@@ -292,28 +305,24 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             raise RuntimeError("Unrecognised subcluster_program: {0}".format(subcluster_program))
         return clusterer
 
-    def subcluster_models(self,
-                          truncation,
-                          subcluster_program=None,
-                          radius_thresholds=None,
-                          ensemble_max_models=None):
+    def subcluster_models(self, truncation, subcluster_program=None, radius_thresholds=None, ensemble_max_models=None):
         if self.subcluster_method == "ORIGINAL":
-            return self.subcluster_models_fixed_radii(truncation,
-                                                      subcluster_program=subcluster_program,
-                                                      ensemble_max_models=ensemble_max_models,
-                                                      radius_thresholds=radius_thresholds)
+            return self.subcluster_models_fixed_radii(
+                truncation,
+                subcluster_program=subcluster_program,
+                ensemble_max_models=ensemble_max_models,
+                radius_thresholds=radius_thresholds,
+            )
         elif self.subcluster_method == "FLOATING_RADII":
-            return self.subcluster_models_floating_radii(truncation,
-                                                         subcluster_program=subcluster_program,
-                                                         ensemble_max_models=ensemble_max_models)
+            return self.subcluster_models_floating_radii(
+                truncation, subcluster_program=subcluster_program, ensemble_max_models=ensemble_max_models
+            )
         else:
             assert False
 
-    def subcluster_models_fixed_radii(self,
-                                      truncation,
-                                      subcluster_program=None,
-                                      ensemble_max_models=None,
-                                      radius_thresholds=None):
+    def subcluster_models_fixed_radii(
+        self, truncation, subcluster_program=None, ensemble_max_models=None, radius_thresholds=None
+    ):
 
         # Theseus only works with > 3 residues
         if truncation.num_residues <= 2:
@@ -344,18 +353,20 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                 continue
 
             logger.debug("Clustered %d files", len(cluster_files))
-            cluster_files = subcluster_util.slice_subcluster(cluster_files,
-                                                             previous_clusters,
-                                                             ensemble_max_models,
-                                                             radius,
-                                                             radius_thresholds)
+            cluster_files = subcluster_util.slice_subcluster(
+                cluster_files, previous_clusters, ensemble_max_models, radius, radius_thresholds
+            )
             if not cluster_files:
-                logger.debug('Could not create different cluster for radius %.2f in directory: %s', radius, truncation.directory)
+                logger.debug(
+                    'Could not create different cluster for radius %.2f in directory: %s', radius, truncation.directory
+                )
                 continue
 
             # Remember this cluster so we don't create duplicate clusters
             previous_clusters.append(cluster_files)
-            ensemble = self.ensemble_from_subcluster(cluster_files, radius, truncation, cluster_score=clusterer.cluster_score)
+            ensemble = self.ensemble_from_subcluster(
+                cluster_files, radius, truncation, cluster_score=clusterer.cluster_score
+            )
             if ensemble is None:
                 continue
             ensembles.append(ensemble)
@@ -365,10 +376,7 @@ class AbinitioEnsembler(_ensembler.Ensembler):
 
         return ensembles
 
-    def subcluster_models_floating_radii(self,
-                                         truncation,
-                                         subcluster_program=None,
-                                         ensemble_max_models=None):
+    def subcluster_models_floating_radii(self, truncation, subcluster_program=None, ensemble_max_models=None):
         logger.info("subclustering with floating radii")
 
         clusterer = self.subclusterer_factory(subcluster_program)
@@ -385,13 +393,17 @@ class AbinitioEnsembler(_ensembler.Ensembler):
             if i > 0 and radii[i - 1] > self.subcluster_radius_thresholds[i]:
                 radius = radii[i - 1]
                 nmodels = len(clusters[i - 1])
-                cluster_files, radius = subcluster_util.subcluster_nmodels(nmodels, radius, clusterer, direction='up', increment=1)
+                cluster_files, radius = subcluster_util.subcluster_nmodels(
+                    nmodels, radius, clusterer, direction='up', increment=1
+                )
             else:
                 radius = self.subcluster_radius_thresholds[i]
                 cluster_files = clusterer.cluster_by_radius(radius)
 
             if cluster_files:
-                cluster_files = tuple(sorted(cluster_files))  # Need to sort so that we can check if we've had this lot before
+                cluster_files = tuple(
+                    sorted(cluster_files)
+                )  # Need to sort so that we can check if we've had this lot before
                 cluster_size = len(cluster_files)
             else:
                 cluster_files = []
@@ -404,7 +416,9 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                 else:
                     radius = radii[i - 1]
                     nmodels = len(clusters[i - 1]) + 1
-                cluster_files, radius = subcluster_util.subcluster_nmodels(nmodels, radius, clusterer, direction='up', increment=1)
+                cluster_files, radius = subcluster_util.subcluster_nmodels(
+                    nmodels, radius, clusterer, direction='up', increment=1
+                )
                 cluster_files = sorted(cluster_files)
             elif cluster_size >= ensemble_max_models or cluster_files in clusters:
                 # Randomly pick ensemble_max_models
@@ -418,7 +432,9 @@ class AbinitioEnsembler(_ensembler.Ensembler):
                 logger.debug('Could not cluster files under radius: %.2f - got %d files', radius, len(cluster_files))
                 break
             logger.debug('Subclustering %d files under radius %.2f', cluster_size, radius)
-            cluster_ensemble = self.ensemble_from_subcluster(list(cluster_files), radius, truncation, cluster_score=clusterer.cluster_score)
+            cluster_ensemble = self.ensemble_from_subcluster(
+                list(cluster_files), radius, truncation, cluster_score=clusterer.cluster_score
+            )
             if cluster_ensemble is None:
                 logger.debug('Could not cluster files under radius: %.2f', radius)
                 break

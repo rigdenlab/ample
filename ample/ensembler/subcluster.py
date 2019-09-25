@@ -52,12 +52,12 @@ class SubClusterer(object):
         else:
             return None
 
-    def _cluster_indices(self,thresh):
+    def _cluster_indices(self, thresh):
         """Return the indices of the largest cluster that have distances < thresh.
         We loop through each row of the distance matrix and for each row (pdb) see
         how many pdbs are < thresh to this pdb. We return the largest cluster.
         """
-        #self.dump_matrix("maxcluster.csv")
+        # self.dump_matrix("maxcluster.csv")
         thresh = float(thresh)
 
         # get mask of all elements where condition is true. We exclude 0.0 to ensure we don't get the
@@ -67,7 +67,7 @@ class SubClusterer(object):
         condition = numpy.logical_and(self.distance_matrix <= thresh, self.distance_matrix != 0.0)
 
         # Array of sums of each row - largest number is a row where most items satisfy condition
-        condition_sum =  condition.sum(axis=1)
+        condition_sum = condition.sum(axis=1)
 
         # Find all rows that have the maximum of the condition true and then select the first one
         row_index = numpy.where(condition_sum == numpy.max(condition_sum))[0][0]
@@ -96,19 +96,21 @@ class SubClusterer(object):
 
         return max(rmsds)
 
-    def dump_raw_matrix(self,file_name):
-        with open(file_name,'w') as f:
+    def dump_raw_matrix(self, file_name):
+        with open(file_name, 'w') as f:
             for row in self.distance_matrix:
-                f.write(",".join(map(str,row))+"\n")
+                f.write(",".join(map(str, row)) + "\n")
             f.write("\n")
         return
 
     def dump_pdb_matrix(self, file_name=SCORE_MATRIX_NAME, offset=0):
-        with open(file_name,'w') as f:
+        with open(file_name, 'w') as f:
             l = len(self.distance_matrix) + offset
             for i in range(offset, l):
                 for j in range(i, l):
-                    f.write("{0: > 4d} {1: > 4d} {2: > 8.3F}\n".format(i,j, self.distance_matrix[i-offset][j-offset]))
+                    f.write(
+                        "{0: > 4d} {1: > 4d} {2: > 8.3F}\n".format(i, j, self.distance_matrix[i - offset][j - offset])
+                    )
             f.write("\n")
         return os.path.abspath(file_name)
 
@@ -154,11 +156,12 @@ class CctbxClusterer(SubClusterer):
 class FpcClusterer(SubClusterer):
     """Class to cluster files with fast_protein_clusterer"""
 
-    def generate_distance_matrix(self,pdb_list):
+    def generate_distance_matrix(self, pdb_list):
 
         # Create list of pdb files
-        fname = os.path.join(os.getcwd(), "files.list" )
-        with open( fname, 'w' ) as f: f.write( "\n".join( pdb_list )+"\n" )
+        fname = os.path.join(os.getcwd(), "files.list")
+        with open(fname, 'w') as f:
+            f.write("\n".join(pdb_list) + "\n")
 
         # Index is just the order of the pdb in the file
         self.index2pdb = sorted(pdb_list)
@@ -168,26 +171,26 @@ class FpcClusterer(SubClusterer):
         # generates more files
         log_name = os.path.abspath("fast_protein_cluster.log")
         matrix_file = "fpc.matrix"
-        cmd = [self.executable,
-               "--cluster_write_text_matrix",
-               matrix_file,
-               "-i",
-               fname]
+        cmd = [self.executable, "--cluster_write_text_matrix", matrix_file, "-i", fname]
 
-        retcode = ample_util.run_command( cmd, logfile=log_name )
+        retcode = ample_util.run_command(cmd, logfile=log_name)
         if retcode != 0:
-            raise RuntimeError("non-zero return code for fast_protein_cluster in generate_distance_matrix!\nCheck logfile:{0}".format(log_name))
+            raise RuntimeError(
+                "non-zero return code for fast_protein_cluster in generate_distance_matrix!\nCheck logfile:{0}".format(
+                    log_name
+                )
+            )
 
-        mlen=0
-        data=[]
+        mlen = 0
+        data = []
         with open(matrix_file) as f:
             for l in f:
                 l = l.strip().split()
                 x = int(l[0])
                 y = int(l[1])
                 d = float(l[2])
-                mlen = max(mlen,x+1) # +1 as we want the length
-                data.append((x,y,d))
+                mlen = max(mlen, x + 1)  # +1 as we want the length
+                data.append((x, y, d))
 
         # create empty matrix - we use None's but this means we need to check for then when
         # looking through the matrix
@@ -195,7 +198,7 @@ class FpcClusterer(SubClusterer):
         m = numpy.zeros([mlen, mlen])
 
         # Fill in all values (upper triangle)
-        for i,j,d in data:
+        for i, j, d in data:
             if i > j:
                 m[j][i] = d
             else:
@@ -204,7 +207,8 @@ class FpcClusterer(SubClusterer):
         # Copy to lower
         for x in range(mlen):
             for y in range(mlen):
-                if x==y: continue
+                if x == y:
+                    continue
                 m[y][x] = m[x][y]
 
         self.distance_matrix = m
@@ -218,11 +222,7 @@ class GesamtClusterer(SubClusterer):
         if True:
             self._generate_pairwise_rmsd_matrix(pdb_list, purge=purge)
         else:
-            self._generate_distance_matrix_generic(self,
-                                                   pdb_list,
-                                                   purge=purge,
-                                                   purge_all=False,
-                                                   metric='qscore')
+            self._generate_distance_matrix_generic(self, pdb_list, purge=purge, purge_all=False, metric='qscore')
         return
 
     def _generate_pairwise_rmsd_matrix(self, models, purge=False):
@@ -284,11 +284,11 @@ where inp_list.dat  contains:
                     nmodel = int(fields[0])
                     rmsd_txt = fields[2].strip()
                     # poke into distance matrix
-                    rmsds = [ float(r) for r in rmsd_txt.split() ]
+                    rmsds = [float(r) for r in rmsd_txt.split()]
                     for j in range(len(rmsds)):
                         if j == nmodel:
                             continue
-                        self.distance_matrix[nmodel-1][j] = rmsds[j]
+                        self.distance_matrix[nmodel - 1][j] = rmsds[j]
                     if nmodel == num_models:
                         reading = -1
         if nmodel != num_models:
@@ -298,7 +298,7 @@ where inp_list.dat  contains:
     def _generate_distance_matrix_generic(self, models, purge=True, purge_all=False, metric='qscore'):
         # Make sure all the files are in the same directory otherwise we wont' work
         mdir = os.path.dirname(models[0])
-        if not all([ os.path.dirname(p) == mdir for p in models ]):
+        if not all([os.path.dirname(p) == mdir for p in models]):
             raise RuntimeError("All pdb files are not in the same directory!")
 
         models = sorted(models)
@@ -313,15 +313,16 @@ where inp_list.dat  contains:
         # Make the archive
         logger.debug("Generating gesamt archive from models in directory %s", mdir)
         garchive = 'gesamt.archive'
-        if not os.path.isdir(garchive): os.mkdir(garchive)
+        if not os.path.isdir(garchive):
+            os.mkdir(garchive)
         logfile = os.path.abspath('gesamt_archive.log')
         cmd = [self.executable, '--make-archive', garchive, '-pdb', mdir]
-        #cmd += [ '-nthreads=auto' ]
+        # cmd += [ '-nthreads=auto' ]
         cmd += ['-nthreads={0}'.format(self.nproc)]
         # HACK FOR DYLD!!!!
         env = None
-        #env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4-devtools/install/lib'}
-        rtn = ample_util.run_command(cmd, logfile,env = env)
+        # env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4-devtools/install/lib'}
+        rtn = ample_util.run_command(cmd, logfile, env=env)
         if rtn != 0:
             raise RuntimeError("Error running gesamt - check logfile: {0}".format(logfile))
 
@@ -336,7 +337,7 @@ where inp_list.dat  contains:
         else:
             raise RuntimeError("Unrecognised metric: {0}".format(metric))
 
-        #m = [[parity for _ in range(nmodels)] for _ in range(nmodels)]
+        # m = [[parity for _ in range(nmodels)] for _ in range(nmodels)]
         m = numpy.full([nmodels, nmodels], parity, dtype=numpy.float)
         for i, model in enumerate(models):
             mname = os.path.basename(model)
@@ -348,7 +349,8 @@ where inp_list.dat  contains:
             if rtn != 0:
                 raise RuntimeError("Error running gesamt!")
             else:
-                if purge: os.unlink(logfile)
+                if purge:
+                    os.unlink(logfile)
 
             gdata = self._parse_gesamt_out(gesamt_out)
             assert gdata[0].file_name == mname, gdata[0].file_name + " " + mname
@@ -388,28 +390,35 @@ where inp_list.dat  contains:
 
     def _parse_gesamt_out(self, out_file):
         # Assumption is there are no pdb_codes
-        GesamtData = namedtuple('GesamtData',
-                                ['count', 'chain_id', 'q_score', 'rmsd', 'seq_id', 'nalign', 'nres', 'file_name'])
+        GesamtData = namedtuple(
+            'GesamtData', ['count', 'chain_id', 'q_score', 'rmsd', 'seq_id', 'nalign', 'nres', 'file_name']
+        )
         data = []
         with open(out_file) as f:
             for i, line in enumerate(f):
                 if i < 2:
-                    continue # First 2 lines are headers
+                    continue  # First 2 lines are headers
                 if not line.strip():
-                    continue # ignore blanks
+                    continue  # ignore blanks
                 try:
                     tmp = GesamtData(*line.split())
                     # Convert from strings to correct types
                     data.append(
                         GesamtData(
-                            int(tmp.count), tmp.chain_id, float(tmp.q_score), float(tmp.rmsd), 
-                            tmp.seq_id, int(tmp.nalign), int(tmp.nres), os.path.basename(tmp.file_name)
+                            int(tmp.count),
+                            tmp.chain_id,
+                            float(tmp.q_score),
+                            float(tmp.rmsd),
+                            tmp.seq_id,
+                            int(tmp.nalign),
+                            int(tmp.nres),
+                            os.path.basename(tmp.file_name),
                         )
                     )
                 except Exception as e:
                     raise RuntimeError('Error parsing line {0}: {1}\n{2}'.format(i, line, e.message))
 
-        assert len(data),"Failed to read any data!"
+        assert len(data), "Failed to read any data!"
         return data
 
 
@@ -423,11 +432,13 @@ class LsqkabClusterer(SubClusterer):
         stdin = """FIT RESIDUE CA 1 TO {0} CHAIN {1}
 MATCH 1 to  {0} CHAIN {1}
 output  RMS
-end""".format(nresidues, 'A')
+end""".format(
+            nresidues, 'A'
+        )
 
         cmd = ['lsqkab', 'XYZINM', model1, 'XYZINF', model2]
         ample_util.run_command(cmd, logfile=logfile, stdin=stdin)
-        rmsd =  self.parse_lsqkab_output(logfile)
+        rmsd = self.parse_lsqkab_output(logfile)
 
         # cleanup
         if purge:
@@ -473,7 +484,7 @@ end""".format(nresidues, 'A')
 
     def parse_lsqkab_output(self, output_file):
         with open(output_file) as f:
-            for  l in f.readlines():
+            for l in f.readlines():
                 if l.startswith("          RMS     XYZ DISPLACEMENT ="):
                     return float(l.split()[4])
         assert False

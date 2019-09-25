@@ -8,6 +8,7 @@ import sys
 
 from ample.util import ample_util
 
+
 def mrbump_cmd(name, mtz, mr_sequence, keyword_file):
     """Return the command to run mrbump"""
     if sys.platform.startswith("win"):
@@ -16,51 +17,59 @@ def mrbump_cmd(name, mtz, mr_sequence, keyword_file):
         mrbump = os.path.join(os.environ["CCP4"], "bin", "mrbump")
     cmd = [
         mrbump,
-        "KEYIN", "{0}".format(keyword_file),
-        "HKLIN", "{0}".format(mtz),
-        "SEQIN", "{0}".format(mr_sequence),
-        "HKLOUT", "{0}.mtz".format(name),
-        "XYZOUT", "{0}.pdb".format(name),
+        "KEYIN",
+        "{0}".format(keyword_file),
+        "HKLIN",
+        "{0}".format(mtz),
+        "SEQIN",
+        "{0}".format(mr_sequence),
+        "HKLOUT",
+        "{0}.mtz".format(name),
+        "XYZOUT",
+        "{0}.pdb".format(name),
     ]
     return " ".join(cmd)
+
 
 def keyword_dict(ensemble_pdb, name, amoptd, extra_options={}):
     """Extract the mrbump keywords from the main ample dictionary and add/change any from
     the extra_options dict"""
     keywords = [
-                'arpwarp_cycles',
-                'buccaneer_cycles',
-                'debug',
-                'existing_mr_solution',
-                'F',
-                'FREE',
-                'mr_keys',
-                'mr_sg_all',
-                'mrbump_programs',
-                'native_pdb',
-                'nmasu',
-                'phaser_kill',
-                'phaser_rms',
-                'shelx_cycles',
-                'shelxe_exe',
-                'shelxe_rebuild_arpwarp',
-                'shelxe_rebuild_buccaneer',
-                'SIGF',
-                'refine_rebuild_arpwarp',
-                'refine_rebuild_buccaneer',
-                'use_shelxe',
-                ]
-    
+        'arpwarp_cycles',
+        'buccaneer_cycles',
+        'debug',
+        'existing_mr_solution',
+        'F',
+        'FREE',
+        'mr_keys',
+        'mr_sg_all',
+        'mrbump_programs',
+        'native_pdb',
+        'nmasu',
+        'phaser_kill',
+        'phaser_rms',
+        'shelx_cycles',
+        'shelxe_exe',
+        'shelxe_rebuild_arpwarp',
+        'shelxe_rebuild_buccaneer',
+        'SIGF',
+        'refine_rebuild_arpwarp',
+        'refine_rebuild_buccaneer',
+        'use_shelxe',
+    ]
+
     # Pull out all mrbump options from the main ample dict
     key_dict = dict((k, v) for k, v in amoptd.iteritems() if k in keywords)
-    
+
     # Change any/add options for this ensemble
-    for k, v in extra_options.iteritems(): key_dict[k] = v
-    
+    for k, v in extra_options.iteritems():
+        key_dict[k] = v
+
     # Add ensemble_pdb and name
     key_dict['name'] = name
     key_dict['ensemble_pdb'] = ensemble_pdb
     return key_dict
+
 
 def mrbump_keyword_file(odict, fixed_iden=0.6):
     """

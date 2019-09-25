@@ -15,12 +15,16 @@ from ample import ensembler
 from ample.util import mrbump_util
 from ample.util import reference_manager
 
-try: import pyrvapi
-except: pyrvapi = None
+try:
+    import pyrvapi
+except:
+    pyrvapi = None
 
 # Hack to use Andre's pyrvapi API
-try: import pyrvapi_ext as API
-except ImportError: API = None
+try:
+    import pyrvapi_ext as API
+except ImportError:
+    API = None
 
 logger = logging.getLogger(__name__)
 
@@ -50,35 +54,35 @@ class AmpleOutput(object):
     """Display the output of an AMPLE job."""
 
     _ensemble_tooltips = {
-        "Name" : "Ensemble name - used to name the pdb file and the directory where mrbump carries out molecular replacement.",
-        "Cluster" : "The SPICKER cluster that this ensemble was derived from.",
-        "Truncation Level" : "Percentage of the model remaining after the varying residues were pruned away",
-        "Variance Threshold (A^2)" : "THESEUS variance score for the most variable residue that remains in this ensemble",
-        "No. Residues" : "Number of residues for each model in the ensemble",
-        "Radius Threshold (A)" : "Radius threshold (1,2 or 3 A) used for subclustering the models in a truncation level",
-        "No. Decoys" : "Number of models within this ensemble",
-        "Number of Atoms" : "Number of atoms for each model in the ensemble",
-        "Sidechain Treatment" : "allatom - all sidechains were retained, reliable - MET, ASP, PRO, GLN, LYS, ARG, GLU, SER were retained, polyAla - all sidechains were stripped back to polyalanine",
-        }
+        "Name": "Ensemble name - used to name the pdb file and the directory where mrbump carries out molecular replacement.",
+        "Cluster": "The SPICKER cluster that this ensemble was derived from.",
+        "Truncation Level": "Percentage of the model remaining after the varying residues were pruned away",
+        "Variance Threshold (A^2)": "THESEUS variance score for the most variable residue that remains in this ensemble",
+        "No. Residues": "Number of residues for each model in the ensemble",
+        "Radius Threshold (A)": "Radius threshold (1,2 or 3 A) used for subclustering the models in a truncation level",
+        "No. Decoys": "Number of models within this ensemble",
+        "Number of Atoms": "Number of atoms for each model in the ensemble",
+        "Sidechain Treatment": "allatom - all sidechains were retained, reliable - MET, ASP, PRO, GLN, LYS, ARG, GLU, SER were retained, polyAla - all sidechains were stripped back to polyalanine",
+    }
 
     _mrbump_tooltips = {
-        "ensemble_name" : "The identifier of the AMPLE ensemble search model",
-        "MR_program" : "Molecular replacement program",
-        "Solution_Type" : "MRBUMP categorisation of the solution",
-        "PHASER_LLG" : "PHASER Log-likelihood gain for the Molecular Replacement solution",
-        "PHASER_TFZ" : "PHASER Translation Function Z-score for the Molecular Replacement solution",
-        "REFMAC_Rfact" : "Rfact score for REFMAC refinement of the Molecular Replacement solution",
-        "REFMAC_Rfree" : "Rfree score for REFMAC refinement of the Molecular Replacement solution",
-        "BUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the Molecular Replacement solution",
-        "BUCC_final_Rfree" : "Rfree score for BUCCANEER rebuild of the Molecular Replacement solution",
-        "ARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the Molecular Replacement solution",
-        "ARP_final_Rfree" : "Rfree score for ARPWARP rebuild of the Molecular Replacement solution",
-        "SHELXE_CC" : "SHELXE Correlation Coefficient score after C-alpha trace",
-        "SHELXE_ACL" : "Average Chain Length of the fragments of the SHELXE C-alpha trace",
-        "SXRBUCC_final_Rfact" : "Rfact score for BUCCANEER rebuild of the SHELXE C-alpha trace",
-        "SXRBUCC_final_Rfree" : "Rfree score for BUCCANEER rebuild of the SHELXE C-alpha trace",
-        "SXRARP_final_Rfact" : "Rfact score for ARPWARP rebuild of the SHELXE C-alpha trace",
-        "SXRAP_final_Rfree" : "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
+        "ensemble_name": "The identifier of the AMPLE ensemble search model",
+        "MR_program": "Molecular replacement program",
+        "Solution_Type": "MRBUMP categorisation of the solution",
+        "PHASER_LLG": "PHASER Log-likelihood gain for the Molecular Replacement solution",
+        "PHASER_TFZ": "PHASER Translation Function Z-score for the Molecular Replacement solution",
+        "REFMAC_Rfact": "Rfact score for REFMAC refinement of the Molecular Replacement solution",
+        "REFMAC_Rfree": "Rfree score for REFMAC refinement of the Molecular Replacement solution",
+        "BUCC_final_Rfact": "Rfact score for BUCCANEER rebuild of the Molecular Replacement solution",
+        "BUCC_final_Rfree": "Rfree score for BUCCANEER rebuild of the Molecular Replacement solution",
+        "ARP_final_Rfact": "Rfact score for ARPWARP rebuild of the Molecular Replacement solution",
+        "ARP_final_Rfree": "Rfree score for ARPWARP rebuild of the Molecular Replacement solution",
+        "SHELXE_CC": "SHELXE Correlation Coefficient score after C-alpha trace",
+        "SHELXE_ACL": "Average Chain Length of the fragments of the SHELXE C-alpha trace",
+        "SXRBUCC_final_Rfact": "Rfact score for BUCCANEER rebuild of the SHELXE C-alpha trace",
+        "SXRBUCC_final_Rfree": "Rfree score for BUCCANEER rebuild of the SHELXE C-alpha trace",
+        "SXRARP_final_Rfact": "Rfact score for ARPWARP rebuild of the SHELXE C-alpha trace",
+        "SXRAP_final_Rfree": "Rfree score for ARPWARP rebuild of the SHELXE C-alpha trace",
     }
 
     def __init__(self, amopt):
@@ -105,12 +109,12 @@ class AmpleOutput(object):
         webserver_uri = amopt['webserver_uri']
 
         # Process modes and set flags
-        self.ccp4i2 = bool(ccp4i2_xml) # Indicate we are running under CCP4I2
-        self.jscofe = bool(rvapi_document) #Indicate we are running under jscofe
+        self.ccp4i2 = bool(ccp4i2_xml)  # Indicate we are running under CCP4I2
+        self.jscofe = bool(rvapi_document)  # Indicate we are running under jscofe
         # Show the gui if we are under ccp4i2, jscofe or show_gui has been specified (e.g. ccp4i)
         self.generate_output = self.ccp4i2 | self.jscofe | show_gui
         # No log tab with jscofe or ccp4i2
-        self.own_log_tab = not(self.ccp4i2 or self.jscofe)
+        self.own_log_tab = not (self.ccp4i2 or self.jscofe)
 
         # For running under old CCP4online
         if webserver_uri:
@@ -121,10 +125,7 @@ class AmpleOutput(object):
             self.webserver_uri = None
             self.wbeserver_start = None
 
-        self.setup(work_dir=work_dir,
-                   ccp4i2_xml=ccp4i2_xml,
-                   rvapi_document=rvapi_document,
-                   show_gui=show_gui)
+        self.setup(work_dir=work_dir, ccp4i2_xml=ccp4i2_xml, rvapi_document=rvapi_document, show_gui=show_gui)
         return
 
     def setup(self, work_dir=None, ccp4i2_xml=None, rvapi_document=None, show_gui=False):
@@ -142,13 +143,14 @@ class AmpleOutput(object):
             self.jsrview_dir = os.path.join(work_dir, "jsrview")
             if not os.path.isdir(self.jsrview_dir):
                 os.mkdir(self.jsrview_dir)
-            kwargs = dict(wintitle=title,
-                          reportdir=self.jsrview_dir,
-                          xml=ccp4i2_xml,
-                          abspaths=False,
-                          # bug in jsrview:
-                          # layout = 4 if i1 else 7,
-                         )
+            kwargs = dict(
+                wintitle=title,
+                reportdir=self.jsrview_dir,
+                xml=ccp4i2_xml,
+                abspaths=False,
+                # bug in jsrview:
+                # layout = 4 if i1 else 7,
+            )
             API.document.newdoc(**kwargs)
         if not self.own_log_tab:
             self.log_tab_id = pyrvapi.rvapi_get_meta()
@@ -174,12 +176,18 @@ class AmpleOutput(object):
             tdata += '<hr><p>A bibtex file with the relevant citations has been saved to: {}</p>'.format(bibtex_file)
         pyrvapi.rvapi_add_text(tdata, self.citation_tab_id, 0, 0, 1, 1)
         if not self.ccp4i2:
-            pyrvapi.rvapi_add_data("bibtex_file",
-                                   "Citations as BIBTEX",
-                                   self.fix_path(bibtex_file),
-                                   "text",
-                                   self.citation_tab_id,
-                                   2, 0, 1, 1, True)
+            pyrvapi.rvapi_add_data(
+                "bibtex_file",
+                "Citations as BIBTEX",
+                self.fix_path(bibtex_file),
+                "text",
+                self.citation_tab_id,
+                2,
+                0,
+                1,
+                1,
+                True,
+            )
         return self.citation_tab_id
 
     def create_log_tab(self, ample_dict):
@@ -203,8 +211,7 @@ class AmpleOutput(object):
         self.old_mrbump_results = mrb_results
         if not self.results_tab_id:
             self.results_tab_id = "results_tab"
-            pyrvapi.rvapi_insert_tab(self.results_tab_id,
-                                     "Results", self.summary_tab_id, False)
+            pyrvapi.rvapi_insert_tab(self.results_tab_id, "Results", self.summary_tab_id, False)
         # Delete old sections:
         pyrvapi.rvapi_flush()
         for section_id in self.results_tab_sections:
@@ -212,19 +219,17 @@ class AmpleOutput(object):
         pyrvapi.rvapi_flush()
         self.results_tab_sections = []
         ensemble_results = ample_dict['ensembles_data'] if 'ensembles_data' in ample_dict['ensembles_data'] else None
-        mrbsum = mrbump_util.ResultsSummary(results=mrb_results[0:min(len(mrb_results),mrbump_util.TOP_KEEP)])
+        mrbsum = mrbump_util.ResultsSummary(results=mrb_results[0 : min(len(mrb_results), mrbump_util.TOP_KEEP)])
         mrbsum.sortResults(prioritise="SHELXE_CC")
-        self.results_section(self.results_tab_id,
-                             mrbsum.results,
-                             ensemble_results,
-                             "Top {0} SHELXE Results".format(mrbump_util.TOP_KEEP))
+        self.results_section(
+            self.results_tab_id, mrbsum.results, ensemble_results, "Top {0} SHELXE Results".format(mrbump_util.TOP_KEEP)
+        )
         mrbsum.sortResults(prioritise="PHASER_TFZ")
         # Add seperator between results - doesn't work as not deleted on refresh
-        #pyrvapi.rvapi_add_text("<br/><hr/><br/>", self.results_tab_id, 0, 0, 1, 1)
-        self.results_section(self.results_tab_id,
-                             mrbsum.results,
-                             ensemble_results,
-                             "Top {0} PHASER Results".format(mrbump_util.TOP_KEEP))
+        # pyrvapi.rvapi_add_text("<br/><hr/><br/>", self.results_tab_id, 0, 0, 1, 1)
+        self.results_section(
+            self.results_tab_id, mrbsum.results, ensemble_results, "Top {0} PHASER Results".format(mrbump_util.TOP_KEEP)
+        )
         return self.results_tab_id
 
     def results_section(self, results_tab_id, mrb_results, ensemble_results, section_title):
@@ -235,7 +240,7 @@ class AmpleOutput(object):
         # All ids will have this appended to avoid clashes
         uid = str(uuid.uuid4())
         section_id = section_title.replace(" ", "_") + uid
-        self.results_tab_sections.append(section_id) # Add to list so we can remove if we update
+        self.results_tab_sections.append(section_id)  # Add to list so we can remove if we update
         pyrvapi.rvapi_add_panel(section_id, results_tab_id, 0, 0, 1, 1)
         pyrvapi.rvapi_add_text("<h3>{0}</h3>".format(section_title), section_id, 0, 0, 1, 1)
         results_tree = "results_tree" + section_id
@@ -263,89 +268,110 @@ class AmpleOutput(object):
                     sec_ensemble = "sec_ensemble_{0}".format(ensemble_name) + uid
                     pyrvapi.rvapi_add_section(sec_ensemble, "Ensemble Search Model", container_id, 0, 0, 1, 1, False)
                     data_ensemble = "data_ensemble_{0}".format(ensemble_name) + uid
-                    pyrvapi.rvapi_add_data(data_ensemble,
-                                           "Ensemble PDB",
-                                           self.fix_path(epdb),
-                                           "XYZOUT",
-                                           sec_ensemble,
-                                           2, 0, 1, 1, True)
+                    pyrvapi.rvapi_add_data(
+                        data_ensemble, "Ensemble PDB", self.fix_path(epdb), "XYZOUT", sec_ensemble, 2, 0, 1, 1, True
+                    )
             # PHASER
-            self.add_results_section(result_dict=r,
-                                      ensemble_name=ensemble_name,
-                                      program_name='PHASER',
-                                      logfile_key='PHASER_logfile',
-                                      pdb_key='PHASER_pdbout',
-                                      mtz_key='PHASER_mtzout',
-                                      uid=uid,
-                                      container_id=container_id)
+            self.add_results_section(
+                result_dict=r,
+                ensemble_name=ensemble_name,
+                program_name='PHASER',
+                logfile_key='PHASER_logfile',
+                pdb_key='PHASER_pdbout',
+                mtz_key='PHASER_mtzout',
+                uid=uid,
+                container_id=container_id,
+            )
             # REFMAC
-            self.add_results_section(result_dict=r,
-                                      ensemble_name=ensemble_name,
-                                      program_name='Refmac',
-                                      logfile_key='REFMAC_logfile',
-                                      pdb_key='REFMAC_pdbout',
-                                      mtz_key='REFMAC_mtzout',
-                                      uid=uid,
-                                      container_id=container_id)
+            self.add_results_section(
+                result_dict=r,
+                ensemble_name=ensemble_name,
+                program_name='Refmac',
+                logfile_key='REFMAC_logfile',
+                pdb_key='REFMAC_pdbout',
+                mtz_key='REFMAC_mtzout',
+                uid=uid,
+                container_id=container_id,
+            )
             # Buccaner
-            self.add_results_section(result_dict=r,
-                                      ensemble_name=ensemble_name,
-                                      program_name='BUCCANEER',
-                                      logfile_key='BUCC_logfile',
-                                      pdb_key='BUCC_pdbout',
-                                      mtz_key='BUCC_mtzout',
-                                      uid=uid,
-                                      container_id=container_id)
+            self.add_results_section(
+                result_dict=r,
+                ensemble_name=ensemble_name,
+                program_name='BUCCANEER',
+                logfile_key='BUCC_logfile',
+                pdb_key='BUCC_pdbout',
+                mtz_key='BUCC_mtzout',
+                uid=uid,
+                container_id=container_id,
+            )
             # Arpwarp
-            self.add_results_section(result_dict=r,
-                                      ensemble_name=ensemble_name,
-                                      program_name='ArpWarp',
-                                      logfile_key='ARP_logfile',
-                                      pdb_key='ARP_pdbout',
-                                      mtz_key='ARP_mtzout',
-                                      uid=uid,
-                                      container_id=container_id)
+            self.add_results_section(
+                result_dict=r,
+                ensemble_name=ensemble_name,
+                program_name='ArpWarp',
+                logfile_key='ARP_logfile',
+                pdb_key='ARP_pdbout',
+                mtz_key='ARP_mtzout',
+                uid=uid,
+                container_id=container_id,
+            )
             # SHELXE
-            self.add_results_section(result_dict=r,
-                                      ensemble_name=ensemble_name,
-                                      program_name='SHELXE',
-                                      logfile_key='SHELXE_logfile',
-                                      pdb_key='SHELXE_pdbout',
-                                      mtz_key='SHELXE_mtzout',
-                                      uid=uid,
-                                      container_id=container_id)
+            self.add_results_section(
+                result_dict=r,
+                ensemble_name=ensemble_name,
+                program_name='SHELXE',
+                logfile_key='SHELXE_logfile',
+                pdb_key='SHELXE_pdbout',
+                mtz_key='SHELXE_mtzout',
+                uid=uid,
+                container_id=container_id,
+            )
             # Buccaner Rebuild
-            self.add_results_section(result_dict=r,
-                                      ensemble_name=ensemble_name,
-                                      program_name='BUCCANEER SHELXE Trace Rebuild',
-                                      logfile_key='SXRBUCC_logfile',
-                                      pdb_key='SXRBUCC_pdbout',
-                                      mtz_key='SXRBUCC_mtzout',
-                                      uid=uid,
-                                      container_id=container_id)
+            self.add_results_section(
+                result_dict=r,
+                ensemble_name=ensemble_name,
+                program_name='BUCCANEER SHELXE Trace Rebuild',
+                logfile_key='SXRBUCC_logfile',
+                pdb_key='SXRBUCC_pdbout',
+                mtz_key='SXRBUCC_mtzout',
+                uid=uid,
+                container_id=container_id,
+            )
             # Arpwarp Rebuild
-            self.add_results_section(result_dict=r,
-                                      ensemble_name=ensemble_name,
-                                      program_name='ARPWARP SHELXE Trace Rebuild',
-                                      logfile_key='SXRARP_logfile',
-                                      pdb_key='SXRARP_pdbout',
-                                      mtz_key='SXRARP_mtzout',
-                                      uid=uid,
-                                      container_id=container_id)
+            self.add_results_section(
+                result_dict=r,
+                ensemble_name=ensemble_name,
+                program_name='ARPWARP SHELXE Trace Rebuild',
+                logfile_key='SXRARP_logfile',
+                pdb_key='SXRARP_pdbout',
+                mtz_key='SXRARP_mtzout',
+                uid=uid,
+                container_id=container_id,
+            )
             pyrvapi.rvapi_set_tree_node(results_tree, container_id, "{0}".format(ensemble_name), "auto", "")
         return
-    
-    def add_results_section(self,
-                             result_dict=None,
-                             ensemble_name=None,
-                             program_name=None,
-                             logfile_key=None,
-                             pdb_key=None,
-                             mtz_key=None,
-                             uid=None,
-                             container_id=None):
-        assert result_dict and ensemble_name and program_name and logfile_key and pdb_key and \
-        mtz_key and uid and container_id
+
+    def add_results_section(
+        self,
+        result_dict=None,
+        ensemble_name=None,
+        program_name=None,
+        logfile_key=None,
+        pdb_key=None,
+        mtz_key=None,
+        uid=None,
+        container_id=None,
+    ):
+        assert (
+            result_dict
+            and ensemble_name
+            and program_name
+            and logfile_key
+            and pdb_key
+            and mtz_key
+            and uid
+            and container_id
+        )
         have_logfile = have_files(result_dict, logfile_key)
         have_pdb_and_mtz = have_files(result_dict, pdb_key, mtz_key)
         if not (have_logfile or have_pdb_and_mtz):
@@ -355,22 +381,34 @@ class AmpleOutput(object):
         pyrvapi.rvapi_add_section(this_sec_id, "{} Outputs".format(program_name), container_id, 0, 0, 1, 1, False)
         if have_pdb_and_mtz:
             data_id = "o{0}{1}".format(program_id, ensemble_name) + uid
-            pyrvapi.rvapi_add_data(data_id,
-                                    "{} OUTPUTS".format(program_name),
-                                    self.fix_path(result_dict[pdb_key]),
-                                    "xyz",
-                                    this_sec_id,
-                                    2, 0, 1, 1, True)
+            pyrvapi.rvapi_add_data(
+                data_id,
+                "{} OUTPUTS".format(program_name),
+                self.fix_path(result_dict[pdb_key]),
+                "xyz",
+                this_sec_id,
+                2,
+                0,
+                1,
+                1,
+                True,
+            )
             pyrvapi.rvapi_append_to_data(data_id, self.fix_path(result_dict[mtz_key]), "hkl:map")
         if have_logfile:
             data_id = "l{0}{1}".format(program_id, ensemble_name) + uid
-            pyrvapi.rvapi_add_data(data_id,
-                                    "{} Logfile".format(program_name),
-                                    self.fix_path(result_dict[logfile_key]),
-                                    #"summary",
-                                    "text",
-                                    this_sec_id,
-                                    2, 0, 1, 1, True)
+            pyrvapi.rvapi_add_data(
+                data_id,
+                "{} Logfile".format(program_name),
+                self.fix_path(result_dict[logfile_key]),
+                # "summary",
+                "text",
+                this_sec_id,
+                2,
+                0,
+                1,
+                1,
+                True,
+            )
 
     def create_summary_tab(self, ample_dict):
         self._create_summary_tab()
@@ -382,22 +420,32 @@ class AmpleOutput(object):
             self.rm_pending_section()
             # Only create the table once
             self.summary_tab_results_sec_id = "mrbump"
-            pyrvapi.rvapi_add_section(self.summary_tab_results_sec_id,
-                                      "MRBUMP", self.summary_tab_id, 0, 0, 1, 1, True)
+            pyrvapi.rvapi_add_section(self.summary_tab_results_sec_id, "MRBUMP", self.summary_tab_id, 0, 0, 1, 1, True)
             self.summary_tab_results_sec_table_id = "mrbump_table"
-            pyrvapi.rvapi_add_table1(self.summary_tab_results_sec_id + "/" + self.summary_tab_results_sec_table_id,
-                                     "MRBUMP Results", 1, 0, 1, 1, True)
+            pyrvapi.rvapi_add_table1(
+                self.summary_tab_results_sec_id + "/" + self.summary_tab_results_sec_table_id,
+                "MRBUMP Results",
+                1,
+                0,
+                1,
+                1,
+                True,
+            )
         mrb_results = ample_dict.get('mrbump_results')
         if not mrb_results == self.old_mrbump_results:
             # We set old_mrbump_results when we create the results_tab
-            self.fill_table(self.summary_tab_results_sec_table_id,
-                            mrbump_util.ResultsSummary().results_table(mrb_results),
-                            tooltips=self._mrbump_tooltips)
+            self.fill_table(
+                self.summary_tab_results_sec_table_id,
+                mrbump_util.ResultsSummary().results_table(mrb_results),
+                tooltips=self._mrbump_tooltips,
+            )
         if not self.summary_tab_survey_sec_id and not self.ccp4i2:
             # Only create the table once
             self.summary_tab_survey_sec_id = "survey"
             pyrvapi.rvapi_add_section(self.summary_tab_survey_sec_id, "Feedback", self.summary_tab_id, 0, 0, 1, 1, True)
-            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(reference_manager.survey_url)
+            rstr = "<h2>How did we do?</h2><h3>Please follow this link and leave some feedback:</h3><a href='{0}' style='color: blue'>{0}</a>".format(
+                reference_manager.survey_url
+            )
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_survey_sec_id, 0, 0, 1, 1)
         return self.summary_tab_id
 
@@ -408,22 +456,25 @@ class AmpleOutput(object):
             pyrvapi.rvapi_insert_tab(self.summary_tab_id, title, self.citation_tab_id, False)
             # Create pending section until we have data to show
             self.summary_tab_pending_sec_id = 'summary_tab_pending'
-            pyrvapi.rvapi_add_section(self.summary_tab_pending_sec_id, "Processing...",
-                                      self.summary_tab_id, 0, 0, 1, 1, True)
+            pyrvapi.rvapi_add_section(
+                self.summary_tab_pending_sec_id, "Processing...", self.summary_tab_id, 0, 0, 1, 1, True
+            )
             rstr = "<p>No results are currently available. Please check back later.</p>"
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_pending_sec_id, 0, 0, 1, 1)
         return
 
     def do_create_ensembles_section(self, ample_dict):
-        return not (ample_dict.get('single_model_mode') or ample_dict.get('homologs') or ample_dict.get('ideal_helices')) \
-        and bool(ample_dict.get('ensembles_data')) and not self.summary_tab_ensemble_sec_id
+        return (
+            not (ample_dict.get('single_model_mode') or ample_dict.get('homologs') or ample_dict.get('ideal_helices'))
+            and bool(ample_dict.get('ensembles_data'))
+            and not self.summary_tab_ensemble_sec_id
+        )
 
     def create_ensembles_section(self, ample_dict):
         self.rm_pending_section()
         ensembles_data = ample_dict['ensembles_data']
         self.summary_tab_ensemble_sec_id = "ensembles"
-        pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id,
-                                  "Ensembles", self.summary_tab_id, 0, 0, 1, 1, True)
+        pyrvapi.rvapi_add_section(self.summary_tab_ensemble_sec_id, "Ensembles", self.summary_tab_id, 0, 0, 1, 1, True)
         if ample_dict['import_ensembles']:
             rstr = 'Imported {0} ensembles.'.format(len(ensembles_data))
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
@@ -444,7 +495,9 @@ class AmpleOutput(object):
             rstr += "Generated {0} ensembles<br/><br/>".format(len(ensembles_data))
             pyrvapi.rvapi_add_text(rstr, self.summary_tab_ensemble_sec_id, 0, 0, 1, 1)
             ensemble_table = "ensemble_table"
-            pyrvapi.rvapi_add_table1(self.summary_tab_ensemble_sec_id + "/" + ensemble_table, "Ensembling Results", 1, 0, 1, 1, True)
+            pyrvapi.rvapi_add_table1(
+                self.summary_tab_ensemble_sec_id + "/" + ensemble_table, "Ensembling Results", 1, 0, 1, 1, True
+            )
             tdata = []
             for i, cluster_num in enumerate(sorted(d['clusters'].keys())):
                 header = True if i == 0 else False
@@ -493,7 +546,7 @@ class AmpleOutput(object):
     def fix_path(self, path):
         """Ammend path so it's suitable for the webserver or jscofe/standalone"""
         if self.webserver_uri:
-            return urlparse.urljoin(self.webserver_uri, path[self._webserver_start:])
+            return urlparse.urljoin(self.webserver_uri, path[self._webserver_start :])
         elif self.jscofe:
             return os.path.join("..", os.path.relpath(path, self.jsrview_dir))
         return path
@@ -512,7 +565,7 @@ class AmpleOutput(object):
 
     def _got_mrbump_results(self, ample_dict):
         return ample_dict.get('mrbump_results') and len(ample_dict['mrbump_results'])
-    
+
     def rm_pending_section(self):
         if self.summary_tab_pending_sec_id:
             pyrvapi.rvapi_flush()
@@ -534,7 +587,7 @@ class AmpleOutput(object):
             return
 
         # Create dictionary we're going to return
-        meta = {'results' : []}
+        meta = {'results': []}
         nresults = 0
         if bool(amopt.get('mrbump_results')):
             mrb_results = amopt['mrbump_results']
@@ -556,30 +609,31 @@ class AmpleOutput(object):
 if __name__ == "__main__":
     import copy, sys, time
     from ample.util import ample_util
+
     logging.basicConfig(level=logging.DEBUG)
     pklfile = sys.argv[1]
     ample_dict = ample_util.read_amoptd(pklfile)
     ample_dict['show_gui'] = True
     ample_dict['ample_log'] = os.path.abspath(__file__)
 
-    report_dir = os.path.abspath(os.path.join(os.curdir,"pyrvapi_tmp"))
+    report_dir = os.path.abspath(os.path.join(os.curdir, "pyrvapi_tmp"))
     AR = AmpleOutput(ample_dict)
     AR.display_results(ample_dict)
 
     view1_dict = copy.copy(ample_dict)
     del view1_dict['ensembles_data']
     del view1_dict['mrbump_results']
- 
+
     SLEEP = 5
- 
+
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
- 
-    #for i in range(10):
+
+    # for i in range(10):
     view1_dict['ensembles_data'] = ample_dict['ensembles_data']
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
- 
+
     mrbump_results = []
     for r in ample_dict['mrbump_results'][0:3]:
         r['SHELXE_CC'] = None
@@ -588,10 +642,10 @@ if __name__ == "__main__":
     view1_dict['mrbump_results'] = mrbump_results
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
- 
+
     view1_dict['mrbump_results'] = ample_dict['mrbump_results'][0:5]
     AR.display_results(view1_dict)
     time.sleep(SLEEP)
- 
+
     view1_dict['mrbump_results'] = ample_dict['mrbump_results']
     AR.display_results(view1_dict)

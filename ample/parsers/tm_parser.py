@@ -1,5 +1,3 @@
-
-
 __author__ = "Felix Simkovic"
 __data__ = "29.06.2016"
 __version__ = "1.0"

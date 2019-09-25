@@ -31,17 +31,19 @@ class SingleModelEnsembler(_ensembler.Ensembler):
 
         return
 
-    def generate_ensembles(self,
-                           models,
-                           ensembles_directory=None,
-                           nproc=None,
-                           percent_truncation=None,
-                           percent_fixed_intervals=None,
-                           side_chain_treatments=SIDE_CHAIN_TREATMENTS,
-                           truncation_method=None,
-                           truncation_pruning=None,
-                           truncation_scorefile=None,
-                           truncation_scorefile_header=None):
+    def generate_ensembles(
+        self,
+        models,
+        ensembles_directory=None,
+        nproc=None,
+        percent_truncation=None,
+        percent_fixed_intervals=None,
+        side_chain_treatments=SIDE_CHAIN_TREATMENTS,
+        truncation_method=None,
+        truncation_pruning=None,
+        truncation_scorefile=None,
+        truncation_scorefile_header=None,
+    ):
         """Method to generate ensembles from a single structure based on 
         residue scores"""
 
@@ -66,10 +68,8 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
 
-        std_model = ample_util.filename_append(models[0], 'std',
-                                               std_models_dir)
-        pdb_edit.standardise(pdbin=models[0], pdbout=std_model,
-                             del_hetatm=True)
+        std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
+        pdb_edit.standardise(pdbin=models[0], pdbout=std_model, del_hetatm=True)
         std_models = [std_model]
         logger.info('Standardised input model: %s', std_models[0])
 
@@ -82,33 +82,30 @@ class SingleModelEnsembler(_ensembler.Ensembler):
             os.mkdir(truncate_dir)
 
         # Read all the scores into a per residue dictionary
-        assert len(truncation_scorefile_header) > 1, \
-            "At least two column labels are required"
+        assert len(truncation_scorefile_header) > 1, "At least two column labels are required"
         residue_scores = self._read_scorefile(truncation_scorefile)
         residue_key = truncation_scorefile_header.pop(0)
-        truncation_scorefile_header = map(str.strip,
-                                          truncation_scorefile_header)
-        assert all(h in residue_scores[0] for h in truncation_scorefile_header), \
-            "Not all column labels are in your CSV file"
+        truncation_scorefile_header = map(str.strip, truncation_scorefile_header)
+        assert all(
+            h in residue_scores[0] for h in truncation_scorefile_header
+        ), "Not all column labels are in your CSV file"
         self.ensembles = []
         for score_key in truncation_scorefile_header:
-            zipped_scores = self._generate_residue_scorelist(residue_key,
-                                                             score_key,
-                                                             residue_scores)
-            score_truncate_dir = os.path.join(truncate_dir,
-                                              "{}".format(score_key))
+            zipped_scores = self._generate_residue_scorelist(residue_key, score_key, residue_scores)
+            score_truncate_dir = os.path.join(truncate_dir, "{}".format(score_key))
             if not os.path.isdir(score_truncate_dir):
                 os.mkdir(score_truncate_dir)
 
-            self.truncator = truncation_util.Truncator(
-                work_dir=score_truncate_dir)
+            self.truncator = truncation_util.Truncator(work_dir=score_truncate_dir)
             self.truncator.theseus_exe = self.theseus_exe
-            for truncation in self.truncator.truncate_models(models=std_models,
-                                                             truncation_method=truncation_method,
-                                                             percent_truncation=percent_truncation,
-                                                             percent_fixed_intervals=percent_fixed_intervals,
-                                                             truncation_pruning=truncation_pruning,
-                                                             residue_scores=zipped_scores):
+            for truncation in self.truncator.truncate_models(
+                models=std_models,
+                truncation_method=truncation_method,
+                percent_truncation=percent_truncation,
+                percent_fixed_intervals=percent_fixed_intervals,
+                truncation_pruning=truncation_pruning,
+                residue_scores=zipped_scores,
+            ):
 
                 pre_ensemble = _ensembler.Ensemble()
                 pre_ensemble.num_residues = truncation.num_residues
@@ -121,22 +118,22 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                 pre_ensemble.truncation_score_key = score_key.lower()
                 pre_ensemble.pdb = truncation.models[0]
 
-                for ensemble in self.edit_side_chains(pre_ensemble,
-                                                      side_chain_treatments,
-                                                      single_structure=True):
+                for ensemble in self.edit_side_chains(pre_ensemble, side_chain_treatments, single_structure=True):
                     self.ensembles.append(ensemble)
 
         return self.ensembles
 
     def generate_ensembles_from_amoptd(self, models, amoptd):
         """Generate ensembles from data in supplied ample data dictionary."""
-        kwargs = {'percent_truncation': amoptd['percent'],
-                  'percent_fixed_intervals': amoptd['percent_fixed_intervals'],
-                  'side_chain_treatments': amoptd['side_chain_treatments'],
-                  'truncation_method': amoptd['truncation_method'],
-                  'truncation_pruning': amoptd['truncation_pruning'],
-                  'truncation_scorefile': amoptd['truncation_scorefile'],
-                  'truncation_scorefile_header': amoptd['truncation_scorefile_header']}
+        kwargs = {
+            'percent_truncation': amoptd['percent'],
+            'percent_fixed_intervals': amoptd['percent_fixed_intervals'],
+            'side_chain_treatments': amoptd['side_chain_treatments'],
+            'truncation_method': amoptd['truncation_method'],
+            'truncation_pruning': amoptd['truncation_pruning'],
+            'truncation_scorefile': amoptd['truncation_scorefile'],
+            'truncation_scorefile_header': amoptd['truncation_scorefile_header'],
+        }
         kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
         return self.generate_ensembles(models, **kwargs)
 
@@ -150,7 +147,9 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         
         :returns: zipped list of residue index plus score
         """
-        assert residue_key in scores[0], "Cannot find residue key {} in scoresfile header: {}".format(residue_key, scores[0])
+        assert residue_key in scores[0], "Cannot find residue key {} in scoresfile header: {}".format(
+            residue_key, scores[0]
+        )
         assert score_key in scores[0], "Cannot find score key {} in scoresfile header: {}".format(score_key, scores[0])
         return [(i[residue_key], i[score_key]) for i in scores]
 

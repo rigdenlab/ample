@@ -14,16 +14,17 @@ import time
 
 logger = logging.getLogger(__name__)
 
+
 class ClusterRun:
     def __init__(self):
 
-        self.qList= []
+        self.qList = []
         self.runningQueueList = []
         self.QTYPE = ""
         self.modeller = None
         self.runDir = None
         self.logDir = None
-        self._scriptFile  = None
+        self._scriptFile = None
         self.debug = True
         return
 
@@ -32,20 +33,20 @@ class ClusterRun:
         Args:
         logDir: directory that the logfiles should end up in
         """
-        
+
         if not scriptFile:
             scriptFile = self._scriptFile
-        assert os.path.isfile(scriptFile),"Cannot find scriptFile {0}".format(scriptFile)
-        
+        assert os.path.isfile(scriptFile), "Cannot find scriptFile {0}".format(scriptFile)
+
         scriptFiles = []
         with open(scriptFile) as f:
             for line in f:
                 scriptFiles.append(line.strip())
-        
+
         for i, line in enumerate(scriptFiles):
             jobDir, script = os.path.split(line)
             jobName = os.path.splitext(script)[0]
-            oldLog = "arrayJob_{0}.log".format(i+1)
+            oldLog = "arrayJob_{0}.log".format(i + 1)
             if logDir is None:
                 # Put log in script directory
                 newLog = os.path.join(jobDir, "{0}.log".format(jobName))
@@ -70,16 +71,16 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                                              ida2a40
                                              ida2a40
 """
-        if self.QTYPE=="SGE":
+        if self.QTYPE == "SGE":
             if user == "":
-                command_line='qstat'
+                command_line = 'qstat'
             else:
-                command_line='qstat -u ' + user
-        elif self.QTYPE=="LSF":
+                command_line = 'qstat -u ' + user
+        elif self.QTYPE == "LSF":
             if user == "":
-                command_line='bjobs'
+                command_line = 'bjobs'
             else:
-                command_line='bjobs -u ' + user
+                command_line = 'bjobs -u ' + user
 
         log_lines = []
         self.runningQueueList = []
@@ -88,14 +89,14 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         child_stdout = p.stdout
         out = child_stdout.readline()
         while out:
-            #sys.stdout.write(out)
+            # sys.stdout.write(out)
             log_lines.append(out.strip())
-            out=child_stdout.readline()
+            out = child_stdout.readline()
         child_stdout.close()
         if log_lines != []:
             log_lines.pop(0)
             # SGE has extra header
-            if self.QTYPE=="SGE":
+            if self.QTYPE == "SGE":
                 log_lines.pop(0)
             for i in log_lines:
                 self.runningQueueList.append(i.split()[0])
@@ -117,8 +118,11 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if str(job) in self.runningQueueList:
                     newRunningList.append(job)
             if len(runningList) > len(newRunningList):
-                logger.info("Queue Monitor: %d out of %d jobs remaining in cluster queue...", \
-                            len(newRunningList),len(self.qList))
+                logger.info(
+                    "Queue Monitor: %d out of %d jobs remaining in cluster queue...",
+                    len(newRunningList),
+                    len(self.qList),
+                )
             if len(newRunningList) == 0:
                 logger.info("Queue Monitor: All jobs complete!")
             runningList = newRunningList
@@ -127,17 +131,19 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 monitor()
         return
 
-    def queueDirectives(self,
-                        nproc=None,
-                        log_file=None,
-                        job_name=None,
-                        job_time=None,
-                        submit_max_array=None,
-                        submit_num_array_jobs=None,
-                        submit_pe_sge='mpi',
-                        submit_pe_lsf='#BSUB -R "span[ptile={0}]"',
-                        submit_qtype=None,
-                        submit_queue=None):
+    def queueDirectives(
+        self,
+        nproc=None,
+        log_file=None,
+        job_name=None,
+        job_time=None,
+        submit_max_array=None,
+        submit_num_array_jobs=None,
+        submit_pe_sge='mpi',
+        submit_pe_lsf='#BSUB -R "span[ptile={0}]"',
+        submit_qtype=None,
+        submit_queue=None,
+    ):
         """
         Create a string suitable for writing out as the header of the submission script
         for submitting to a particular queueing system.
@@ -155,12 +161,8 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         queue directives as a list of EOL-terminated strings
         """
         sh = []
-        if submit_qtype=="SGE":
-            sh += ['#$ -j y\n',
-                   '#$ -cwd\n',
-                   '#$ -w e\n',
-                   '#$ -V\n',
-                   '#$ -S /bin/bash\n']
+        if submit_qtype == "SGE":
+            sh += ['#$ -j y\n', '#$ -cwd\n', '#$ -w e\n', '#$ -V\n', '#$ -S /bin/bash\n']
             if job_time:
                 sh += ['#$ -l h_rt={0}\n'.format(job_time)]
             if submit_queue:
@@ -178,13 +180,13 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             if nproc and nproc > 1:
                 sh += ['#$ -pe {0} {1}\n'.format(submit_pe_sge, nproc)]
             # Later versions of SGE don't properly export the PATH so need to do it ourselves
-            sh +=['export PATH=${PATH}:${SGE_O_PATH}\n']
+            sh += ['export PATH=${PATH}:${SGE_O_PATH}\n']
             sh += ['\n']
-        elif submit_qtype=="LSF":
+        elif submit_qtype == "LSF":
             if nproc and submit_pe_lsf:
                 sh += [submit_pe_lsf.format(nproc) + os.linesep]
             if job_time:
-                sh += ['#BSUB -W {0}\n'.format(job_time/60)]
+                sh += ['#BSUB -W {0}\n'.format(job_time / 60)]
             else:
                 sh += ['#BSUB -W 4:00\n']
             if nproc and nproc > 1:
@@ -194,20 +196,20 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
             if log_file:
                 sh += ['#BSUB -o {0}\n'.format(log_file)]
             if submit_num_array_jobs:
-                assert job_name,"LSF array job requires a job name"
+                assert job_name, "LSF array job requires a job name"
                 sh += ['#BSUB -o arrayJob_%I.log\n']
                 if submit_max_array:
                     sh += ['#BSUB -J {0}[1-{1}]%{2}\n'.format(job_name, submit_num_array_jobs, submit_max_array)]
                 else:
                     sh += ['#BSUB -J {0}[1-{1}]\n'.format(job_name, submit_num_array_jobs)]
             elif job_name:
-                sh += ['#BSUB -J {0}\n'.format(job_name)]       
+                sh += ['#BSUB -J {0}\n'.format(job_name)]
             sh += ['\n']
         else:
             raise RuntimeError("Unrecognised QTYPE: {0}".format(submit_queue))
         sh += ['\n']
         return sh
-    
+
     def submitJob(self, subScript):
         """
         Submit the job to the queue and return the job number.
@@ -220,14 +222,14 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         
          We cd to the job directory, submit and then cd back to where we came from
         """
-        
+
         command_line = None
         stdin = None
         if self.QTYPE == "SGE":
             command_line = 'qsub -V %s' % subScript
         elif self.QTYPE == "LSF":
-            command_line='bsub'
-            stdin = open( subScript, "r")
+            command_line = 'bsub'
+            stdin = open(subScript, "r")
         else:
             msg = "Unrecognised QTYPE: {0}".format(self.QTYPE)
             raise RuntimeError(msg)
@@ -235,28 +237,28 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         logger.debug("Submitting job with command: {0}".format(command_line))
         process_args = shlex.split(command_line)
         try:
-            p = subprocess.Popen(process_args, stdin = stdin, stdout = subprocess.PIPE, stderr = subprocess.PIPE)
+            p = subprocess.Popen(process_args, stdin=stdin, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except Exception as e:
-            raise RuntimeError("Error submitting job to queue with commmand: {0}\n{1}".format(command_line,e))
+            raise RuntimeError("Error submitting job to queue with commmand: {0}\n{1}".format(command_line, e))
 
         child_stdout = p.stdout
         child_stderr = p.stderr
 
         # Check there were no errors
         stderr_str = child_stderr.readline()
-        if self.QTYPE=="SGE" and "Unable to run job" in stderr_str:
+        if self.QTYPE == "SGE" and "Unable to run job" in stderr_str:
             raise RuntimeError("Error submitting job to cluster queueing system: {0}".format(stderr_str))
 
         # Watch the output for successful termination
         out = child_stdout.readline()
 
-        qNumber=0
+        qNumber = 0
         while out:
             qNumber = None
             if self.QTYPE == "SGE":
                 if "Your job-array" in out:
                     # Array jobs have different form
-                    #Your job-array 19094.1-10:1 ("array.script") has been submitted
+                    # Your job-array 19094.1-10:1 ("array.script") has been submitted
                     qNumber = int(out.split()[2].split(".")[0])
                     self.qList.append(qNumber)
                 elif "Your job" in out:
@@ -267,21 +269,16 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
                 if "is submitted to queue" in out:
                     qStr = out.split()[1]
                     qNumber = int(qStr.strip("<>"))
-                    self.qList.append(qNumber)                
+                    self.qList.append(qNumber)
             if qNumber:
-                logger.debug("Submission script {0} submitted to queue as job {1}".format( subScript, qNumber ) )
+                logger.debug("Submission script {0} submitted to queue as job {1}".format(subScript, qNumber))
             out = child_stdout.readline()
         child_stdout.close()
         return str(qNumber)
-    
-    def submitArrayJob(self,
-                       job_scripts,
-                       job_name=None,
-                       job_time=None,
-                       submit_max_array=None,
-                       submit_queue=None,
-                       submit_qtype=None
-                       ):
+
+    def submitArrayJob(
+        self, job_scripts, job_name=None, job_time=None, submit_max_array=None, submit_queue=None, submit_qtype=None
+    ):
         """Submit a list of jobs as an array job
         
         Args:
@@ -294,41 +291,46 @@ JOBID   USER    STAT  QUEUE      FROM_HOST   EXEC_HOST   JOB_NAME   SUBMIT_TIME
         submit_qtype -- the type of the queueing system (e.g. SGE)
         
         """
-        
+
         job_dir = os.getcwd()
-        
+
         # Create the list of scripts
-        self._scriptFile = os.path.abspath(os.path.join(job_dir,"array.jobs"))
+        self._scriptFile = os.path.abspath(os.path.join(job_dir, "array.jobs"))
         nJobs = len(job_scripts)
-        with open(self._scriptFile,'w') as f:
+        with open(self._scriptFile, 'w') as f:
             for s in job_scripts:
                 # Check the scripts are of the correct format - abspath and .sh extension
                 if not s.startswith("/") or not s.endswith(".sh"):
-                    raise RuntimeError("Scripts for array jobs must be absolute paths with a .sh extension: {0}".format(s))
-                f.write(s+"\n")
-                
+                    raise RuntimeError(
+                        "Scripts for array jobs must be absolute paths with a .sh extension: {0}".format(s)
+                    )
+                f.write(s + "\n")
+
         # Generate the qsub array script
-        arrayScript = os.path.abspath(os.path.join(job_dir,"array.script"))
- 
+        arrayScript = os.path.abspath(os.path.join(job_dir, "array.script"))
+
         if submit_qtype == "SGE":
             task_env = 'SGE_TASK_ID'
         elif submit_qtype == "LSF":
             task_env = 'LSB_JOBINDEX'
         else:
             raise RuntimeError("Unsupported submission type: {0}".format(submit_qtype))
-        
+
         # Write head of script
         s = "#!/bin/sh\n"
         # Queue directives
-        s += "".join(self.queueDirectives(nproc=None,
-                                          log_file=None,
-                                          job_name=job_name,
-                                          job_time=job_time,
-                                          submit_max_array=submit_max_array,
-                                          submit_num_array_jobs=nJobs,
-                                          submit_queue=submit_queue,
-                                          submit_qtype=submit_qtype
-                                          ))
+        s += "".join(
+            self.queueDirectives(
+                nproc=None,
+                log_file=None,
+                job_name=job_name,
+                job_time=job_time,
+                submit_max_array=submit_max_array,
+                submit_num_array_jobs=nJobs,
+                submit_queue=submit_queue,
+                submit_qtype=submit_qtype,
+            )
+        )
         # body
         s += """scriptlist={0}
 
@@ -343,7 +345,10 @@ cd $jobdir
 
 # Run the script
 $script
-""".format(self._scriptFile, task_env)
-        with open(arrayScript,'w') as f: f.write(s)
+""".format(
+            self._scriptFile, task_env
+        )
+        with open(arrayScript, 'w') as f:
+            f.write(s)
         self.submitJob(arrayScript)
         return

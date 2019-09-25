@@ -19,11 +19,12 @@ import shutil
 import sys
 import warnings
 
-#try:
+# try:
 import iotbx.pdb
-#except (ImportError, ModuleNotFoundError):
+
+# except (ImportError, ModuleNotFoundError):
 #    warnings.warn("Module iotbx.pdb not found in ensembler.__init__.py - assuming running under sphinx to generate docs")
-    
+
 
 from ample.ensembler.abinitio import AbinitioEnsembler
 from ample.ensembler.constants import SPICKER_TM
@@ -59,7 +60,7 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     script_path = os.path.join(work_dir, "submit_ensemble.sh")
     with open(script_path, "w") as job_script:
         job_script.write(ample_util.SCRIPT_HEADER + os.linesep)
-        job_script.write("export CCP4_SCR=${TMPDIR}" + os.linesep) #Added by Ronan after issues on CCP4online server
+        job_script.write("export CCP4_SCR=${TMPDIR}" + os.linesep)  # Added by Ronan after issues on CCP4online server
         job_script.write("ccp4-python -m ample.ensembler -restart_pkl {0}".format(amoptd['results_path']) + os.linesep)
 
     # Make executable
@@ -235,8 +236,19 @@ def cluster_table_data(clusters, cluster_num, side_chain_treatments, header=True
     # FIX TO IGNORE side_chain_treatments
     # tdata = [("Name", "Truncation Level", u"Variance Threshold (\u212B^2)", "No. Residues", u"Radius Threshold (\u212B)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
     if header:
-        tdata = [("Name", "Cluster", "Truncation Level", "Variance Threshold (A^2)", "No. Residues",
-                  "Radius Threshold (A)", "No. Decoys", "Number of Atoms", "Sidechain Treatment")]
+        tdata = [
+            (
+                "Name",
+                "Cluster",
+                "Truncation Level",
+                "Variance Threshold (A^2)",
+                "No. Residues",
+                "Radius Threshold (A)",
+                "No. Decoys",
+                "Number of Atoms",
+                "Sidechain Treatment",
+            )
+        ]
     else:
         tdata = []
     for tl in sorted(clusters[cluster_num]['tlevels']):
@@ -301,7 +313,7 @@ def ensemble_summary(ensembles_data):
     return rstr
 
 
-def get_ensembler_timeout(optd, tm_timeout=3600*8):
+def get_ensembler_timeout(optd, tm_timeout=3600 * 8):
     """Set how long the ensembling should run based on the type of job being run"""
     timeout = optd['ensembler_timeout']
     if optd['cluster_method'] == SPICKER_TM:
@@ -440,8 +452,11 @@ def _sort_ensembles(ensemble_pdbs, ensemble_data, keys, prioritise):
     # Keys we want to sort data by - differs for different source of ensembles
     if keys is None:
         keys = [
-            'cluster_num', 'truncation_score_key', 'truncation_level', 'subcluster_radius_threshold',
-            'side_chain_treatment'
+            'cluster_num',
+            'truncation_score_key',
+            'truncation_level',
+            'subcluster_radius_threshold',
+            'side_chain_treatment',
         ]
     else:
         keys = [key for key in keys if key in ensemble_data[0] and ensemble_data[0][key]]

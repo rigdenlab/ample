@@ -12,9 +12,9 @@ from ample.util.ample_util import is_file
 from ample.constants import SHARE_DIR
 from ample.ensembler.constants import SPICKER_RMSD, SPICKER_TM
 
- 
-class ReferenceManager():
-     
+
+class ReferenceManager:
+
     # Section Names
     class SECTIONS(Enum):
         __order__ = 'GENERAL MODELLING MODEL_PREP MR REFINEMENT DM AUTOBUILD'
@@ -25,9 +25,9 @@ class ReferenceManager():
         REFINEMENT = 'Refinement'
         DM = 'Main-chain tracing and density modification'
         AUTOBUILD = 'Autobuilding'
-        
+
     SEC_TAG = 'h3'
-     
+
     def __init__(self, optd):
         self.references = {}
         self.ordered_labels = []
@@ -35,12 +35,11 @@ class ReferenceManager():
         self.section_labels = OrderedDict()
         self.setup_references()
         self.setup_sections(optd)
-        
+
     def setup_references(self):
         ref_fname = os.path.join(SHARE_DIR, "include", "ample.bib")
         if not is_file(ref_fname):
-            msg = "Cannot find BibTex file containing references. " \
-                  "Please determine them yourself and cite AMPLE."
+            msg = "Cannot find BibTex file containing references. " "Please determine them yourself and cite AMPLE."
             return msg
         article = {}
         entry = False
@@ -50,16 +49,16 @@ class ReferenceManager():
                 if not line:
                     continue
                 elif line.startswith("@"):
-                    # Beginning of all BibTex entry blocks                  
+                    # Beginning of all BibTex entry blocks
                     entry = True
                     unique_id = line.replace("@article{", "").replace(",", "")
-                    article = {'unique_id': unique_id}      # Reset the article dictionary
+                    article = {'unique_id': unique_id}  # Reset the article dictionary
                 elif line == "}":
-                    # End of all BibTex entry blocks                      
+                    # End of all BibTex entry blocks
                     entry = False
                     self.references[article['label']] = article
                 elif entry:
-                    # BibTex entry block                               
+                    # BibTex entry block
                     # Some dirty line handling.
                     # Not very bulletproof but should do for now
                     line = line.replace("{", "").replace("}", "")
@@ -73,7 +72,7 @@ class ReferenceManager():
         # Create default lists
         for section in self.SECTIONS:
             self.section_labels[section] = []
-        
+
         # Build up list of program reference labels, ordered by sections
         for section in self.SECTIONS:
             if section == self.SECTIONS.GENERAL:
@@ -122,44 +121,52 @@ class ReferenceManager():
                     if optd.get('refine_rebuild_arpwarp') or optd.get('shelxe_rebuild_arpwarp'):
                         labels += ['ARPWARP']
                     elif optd.get('refine_rebuild_buccaneer') or optd.get('shelxe_rebuild_buccaneer'):
-                        labels += ['BUCCANEER']        
+                        labels += ['BUCCANEER']
                     self.section_labels[section] = labels
-                
+
         # Generate ordered list of all relevant reference labels
         for section in self.SECTIONS:
             if section in self.section_labels:
                 self.ordered_labels += self.section_labels[section]
         return
-    
+
     @property
     def methods_as_html(self):
-        html = "<p>This section lists the programs and algorithms that were used in this job and the references that should be cited. " + \
-               "Numbers in superscript next to program/reference names refer to the number of the program reference in the overall list of references.</p>"
+        html = (
+            "<p>This section lists the programs and algorithms that were used in this job and the references that should be cited. "
+            + "Numbers in superscript next to program/reference names refer to the number of the program reference in the overall list of references.</p>"
+        )
         for section in self.SECTIONS:
             if section == self.SECTIONS.GENERAL:
-                html += '<p>The first 2 references should be cited in all cases.</p>' + \
-                        '<p>If your protein was a coiled-coil protein, please cite reference number 3.</p>' + \
-                        '<p>If coevolutionary contact information was used in the generation of your models, please cite reference number 4.</p>'
+                html += (
+                    '<p>The first 2 references should be cited in all cases.</p>'
+                    + '<p>If your protein was a coiled-coil protein, please cite reference number 3.</p>'
+                    + '<p>If coevolutionary contact information was used in the generation of your models, please cite reference number 4.</p>'
+                )
             elif section == self.SECTIONS.MODELLING and len(self.section_labels[self.SECTIONS.MODELLING]):
                 standfirst = "<p>The following programs or algorithims were used for model building:</p>"
                 html += self._methods_section_html(self.SECTIONS.MODELLING, standfirst)
             elif section == self.SECTIONS.MODEL_PREP and len(self.section_labels[self.SECTIONS.MODEL_PREP]):
-                standfirst ='<p>Model analysis and search model preparation was carried out with the following programs:</p>'
+                standfirst = (
+                    '<p>Model analysis and search model preparation was carried out with the following programs:</p>'
+                )
                 html += self._methods_section_html(self.SECTIONS.MODEL_PREP, standfirst)
             elif section == self.SECTIONS.MR and len(self.section_labels[self.SECTIONS.MR]):
-                standfirst ='<p>Molecular Replacement was carried out with the following programs:</p>'
+                standfirst = '<p>Molecular Replacement was carried out with the following programs:</p>'
                 html += self._methods_section_html(self.SECTIONS.MR, standfirst)
             elif section == self.SECTIONS.REFINEMENT and len(self.section_labels[self.SECTIONS.REFINEMENT]):
-                standfirst ='<pRefinement of the MR solutions carried out with the following programs:</p>'
+                standfirst = '<pRefinement of the MR solutions carried out with the following programs:</p>'
                 html += self._methods_section_html(self.SECTIONS.REFINEMENT, standfirst)
             elif section == self.SECTIONS.DM and len(self.section_labels[self.SECTIONS.DM]):
-                standfirst ='<p>Density modification and main-chain tracing was carried out with the following programs:</p>'
+                standfirst = (
+                    '<p>Density modification and main-chain tracing was carried out with the following programs:</p>'
+                )
                 html += self._methods_section_html(self.SECTIONS.DM, standfirst)
             elif section == self.SECTIONS.AUTOBUILD and len(self.section_labels[self.SECTIONS.AUTOBUILD]):
-                standfirst ='Autobuilding of the final structure was carried out with the following programs:</p>'
+                standfirst = 'Autobuilding of the final structure was carried out with the following programs:</p>'
                 html += self._methods_section_html(self.SECTIONS.AUTOBUILD, standfirst)
         return html
-    
+
     def _methods_section_html(self, section, standfirst):
         mysec = self.SECTIONS(section)
         html = '<{}>{}</{}>'.format(self.SEC_TAG, mysec.value, self.SEC_TAG)
@@ -182,7 +189,7 @@ class ReferenceManager():
             html += template_txt.format(**ref)
         html += '</ol>'
         return html
-    
+
     @property
     def citations_as_text(self):
         txt = """A number of programs and algorithms were used within the this run of AMPLE.
@@ -190,16 +197,20 @@ class ReferenceManager():
 The following is a list of citations for this run:
 
 {0}
-""".format(self.citation_list_as_text)
+""".format(
+            self.citation_list_as_text
+        )
         if self.citation_file_path:
             txt += """
 A bibtex file with these references has been saved to the following file:
 
 {0}
 
-""".format(self.citation_file_path)
+""".format(
+                self.citation_file_path
+            )
             return txt
-    
+
     @property
     def citation_list_as_text(self):
         template_txt = "* {author} ({year}). {title}. {journal} {volume}({number}), {pages}. [doi:{doi}]"
@@ -208,18 +219,20 @@ A bibtex file with these references has been saved to the following file:
             ref = copy.copy(self.references[label])
             ref['author'] = ref['author'].split(" and ")[0].split(",")[0] + " et al."
             ref['pages'] = ref['pages'].replace("--", "-")
-            text += template_txt.format(**ref) + os.linesep*2
+            text += template_txt.format(**ref) + os.linesep * 2
         return text
-    
+
     def save_citations_to_file(self, optd):
         # =========================================================================
         # Somewhat a template of how we want to write each article in BibTex format
         # =========================================================================
-        template_bib = "@article{{{unique_id},{sep}author = {{{author}}},{sep}doi = {{{doi}}},{sep}" \
-                       "journal = {{{journal}}},{sep}number = {{{number}}},{sep}pages = {{{pages}}},{sep}" \
-                       "title = {{{{{title}}}}},{sep}volume = {{{volume}}},{sep}year = {{{year}}},{sep}}}{sep}"
+        template_bib = (
+            "@article{{{unique_id},{sep}author = {{{author}}},{sep}doi = {{{doi}}},{sep}"
+            "journal = {{{journal}}},{sep}number = {{{number}}},{sep}pages = {{{pages}}},{sep}"
+            "title = {{{{{title}}}}},{sep}volume = {{{volume}}},{sep}year = {{{year}}},{sep}}}{sep}"
+        )
         references_bib = [template_bib.format(sep=os.linesep, **self.references[l]) for l in self.ordered_labels]
-        ref_fname = os.path.join(optd['work_dir'], optd['name']+".bib")
+        ref_fname = os.path.join(optd['work_dir'], optd['name'] + ".bib")
         with open(ref_fname, "w") as fhout:
             fhout.write(os.linesep.join(references_bib))
         self.citation_file_path = ref_fname
@@ -255,7 +268,8 @@ footer = """
 #*                 {url}                      *#
 #***********************************************************************#
 #########################################################################
-""".format(url=survey_url)
+""".format(
+    url=survey_url
+)
 # ======================================================================
 # ======================================================================
-
