@@ -362,7 +362,7 @@ def add_mr_options(parser=None):
     )
     mr_group.add_argument('-shelx_cycles', help='The number of SHELXE cycles to run when rebuilding.')
     mr_group.add_argument('-shelxe_exe', metavar='path to shelxe executable', help='Path to the SHELXE executable')
-    mr_group.add_argument('-shelxe_max_resolution', help='Maximum permitted resolution for rebuidling with SHELXE')
+    mr_group.add_argument('-shelxe_max_resolution', help='Maximum permitted resolution for rebuilding with SHELXE')
     mr_group.add_argument(
         '-shelxe_rebuild',
         action=BoolAction,
