@@ -1,6 +1,7 @@
 """Tests for util.config_util"""
 
 import unittest
+import random
 
 from ample.util.config_util import AMPLEConfigOptions
 from ample.util import argparse_util
@@ -60,7 +61,7 @@ class Test(unittest.TestCase):
         options.populate(argso)
 
         options.d['shelxe_rebuild'] = True
-        limit = SHELXE_MAX_PERMITTED_RESOLUTION + ((SHELXE_MAX_PERMITTED_RESOLUTION_CC - SHELXE_MAX_PERMITTED_RESOLUTION) / 2)
+        limit = random.uniform(SHELXE_MAX_PERMITTED_RESOLUTION, SHELXE_MAX_PERMITTED_RESOLUTION_CC)
         options.d['mtz_min_resolution'] = limit
         options_processor.process_mr_options(options.d)
         
@@ -70,9 +71,9 @@ class Test(unittest.TestCase):
         
     def test_options_shelxe_resolution_cmd(self):
         """Check limit with coiled-coil mode turned on
+        Need to see if we can override and extend the original limit
         """
-        extra = (REBUILD_MAX_PERMITTED_RESOLUTION - SHELXE_MAX_PERMITTED_RESOLUTION_CC) / 2
-        limit = REBUILD_MAX_PERMITTED_RESOLUTION - extra
+        limit = random.uniform(SHELXE_MAX_PERMITTED_RESOLUTION_CC, REBUILD_MAX_PERMITTED_RESOLUTION)
         options = AMPLEConfigOptions()
         argso = argparse_util.process_command_line(args=['-mtz', 'foo',
                                                          '-fasta', 'bar',
@@ -82,7 +83,7 @@ class Test(unittest.TestCase):
         
         options.d['use_shelxe'] = True
         options.d['shelxe_rebuild'] = True
-        options.d['mtz_min_resolution'] = SHELXE_MAX_PERMITTED_RESOLUTION_CC + (extra / 2)
+        options.d['mtz_min_resolution'] = random.uniform(limit, REBUILD_MAX_PERMITTED_RESOLUTION)
         options_processor.process_mr_options(options.d)
         
         self.assertTrue(options.d['use_shelxe'])
