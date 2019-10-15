@@ -15,3 +15,13 @@
      - .. cssclass:: btn btn-primary btn-sm btn-example
    
        :ref:`Show <example_nmr_ensemble>`
+
+   * - - Ideal helices
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_ideal_helices>`
+
+   * - - Coiled-coils
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_coiled_coils>`
