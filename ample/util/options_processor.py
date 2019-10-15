@@ -407,13 +407,19 @@ def process_mr_options(optd):
         optd['refine_rebuild_arpwarp'] = False
         optd['refine_rebuild_buccaneer'] = False
 
+    if optd['shelxe_max_resolution'] < 0.0:
+        if optd['coiled_coil']:
+            optd['shelxe_max_resolution'] = mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION_CC
+        else:
+            optd['shelxe_max_resolution'] = mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION
+    
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
-        if optd['mtz_min_resolution'] > mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION:
+        if optd['mtz_min_resolution'] > optd['shelxe_max_resolution']:
             logger.warn(
                 "Disabling use of SHELXE as min resolution of %f is < accepted limit of %f",
                 optd['mtz_min_resolution'],
-                mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION,
+                optd['shelxe_max_resolution'],
             )
             optd['use_shelxe'] = False
             optd['shelxe_rebuild'] = False

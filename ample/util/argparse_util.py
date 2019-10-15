@@ -360,28 +360,29 @@ def add_mr_options(parser=None):
         metavar='True/False',
         help='True to use Buccaneer to rebuild the REFMAC-refined MR result.',
     )
-    mr_group.add_argument('-shelx_cycles', help='The number of shelx cycles to run when rebuilding.')
-    mr_group.add_argument('-shelxe_exe', metavar='path to shelxe executable', help='Path to the shelxe executable')
+    mr_group.add_argument('-shelx_cycles', help='The number of SHELXE cycles to run when rebuilding.')
+    mr_group.add_argument('-shelxe_exe', metavar='path to shelxe executable', help='Path to the SHELXE executable')
+    mr_group.add_argument('-shelxe_max_resolution', help='Maximum permitted resolution for rebuilding with SHELXE')
     mr_group.add_argument(
         '-shelxe_rebuild',
         action=BoolAction,
         nargs='?',
         metavar='True/False',
-        help='Rebuild shelxe traced pdb with buccaneer and arpwarp',
+        help='Rebuild SHELXE traced pdb with buccaneer and arpwarp',
     )
     mr_group.add_argument(
         '-shelxe_rebuild_arpwarp',
         action=BoolAction,
         nargs='?',
         metavar='True/False',
-        help='Rebuild shelxe traced pdb with arpwarp',
+        help='Rebuild SHELXE traced pdb with arpwarp',
     )
     mr_group.add_argument(
         '-shelxe_rebuild_buccaneer',
         action=BoolAction,
         nargs='?',
         metavar='True/False',
-        help='Rebuild shelxe traced pdb with buccaneer',
+        help='Rebuild SHELXE traced pdb with buccaneer',
     )
     mr_group.add_argument(
         '-use_scwrl',
@@ -390,7 +391,7 @@ def add_mr_options(parser=None):
         metavar='True/False',
         help='Remodel sidechains of the decoy models using Scwrl4',
     )
-    mr_group.add_argument('-use_shelxe', action=BoolAction, nargs='?', metavar='True/False', help='True to use shelxe')
+    mr_group.add_argument('-use_shelxe', action=BoolAction, nargs='?', metavar='True/False', help='True to use SHELXE')
     return parser
 
 
