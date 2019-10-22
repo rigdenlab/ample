@@ -22,6 +22,7 @@ $CCP4/bin/ample \
 -percent 50 \
 -use_shelxe True \
 -nproc 5 \
+-show_gui True \
 
 # Additional optional flags
 # Add below to run from pre-made models
