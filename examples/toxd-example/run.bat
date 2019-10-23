@@ -6,5 +6,6 @@ REM Toxd test case
 -percent 50 ^
 -quick_mode True ^
 -nproc 6 ^
--models ..\..\tests\testfiles\models
+-models ..\..\tests\testfiles\models ^
+-show_gui True
 

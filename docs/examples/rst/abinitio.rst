@@ -35,14 +35,14 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/toxd-example/run.sh
    :language: bash
-   :lines: 15-24
+   :lines: 15-25
 
 Windows
 ^^^^^^^
 
 .. literalinclude:: /../examples/toxd-example/run.bat
    :language: batch
-   :lines: 3-9
+   :lines: 3-10
 
 First we set the path to the location where ROSETTA is installed. This is then input into ample using the ``-rosetta_dir`` flag.
 
@@ -140,6 +140,13 @@ Log File
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
 .. figure:: ../images/log_toxd.png
+   :align: center
+
+Citations
+---------
+This section lists the programs and algoriths that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
+
+.. figure:: ../images/citation_toxd.png
    :align: center
 
 ------------------------------------------------------------------

@@ -13,5 +13,6 @@ $CCP4/bin/ample \
 -fasta input/102L.fasta \
 -name 102l \
 -nmr_model_in input/2LC9.pdb \
--quick_mode True
+-quick_mode True \
+-show_gui True
 

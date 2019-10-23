@@ -8,7 +8,8 @@ set PATH=C:\Users\jmht42\Shelx\shelx64;%PATH%
 -mtz input\3dcy-sf.mtz ^
 -homologs True ^
 -models .  ^
--nproc 8 
+-nproc 8 ^
+-show_gui True
 
 # Add below for running in benchmark mode
 #-mustang_exe C:\opt\MUSTANG_v3.2.2\bin\mustang-3.2.1 ^

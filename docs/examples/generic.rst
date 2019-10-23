@@ -1,5 +1,6 @@
+.. _examples:
 
-.. list-table:: Generic Examples
+.. list-table:: Command line examples
    :class: table-hover
    :widths: 1200, 10
 
@@ -24,4 +25,4 @@
    * - - Coiled-coils
      - .. cssclass:: btn btn-primary btn-sm btn-example
 
-       :ref:`Show <example_coiled_coils>`
+       :ref:`Show <example_coiled_coil>`

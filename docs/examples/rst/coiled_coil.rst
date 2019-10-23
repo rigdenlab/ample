@@ -38,7 +38,7 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/coiled-coil/run.sh
    :language: bash
-   :lines: 15-24
+   :lines: 15-28
 
 First we set the path to the location where ROSETTA is installed. This is then input into ample using the ``-rosetta_dir`` flag.
 
@@ -51,7 +51,11 @@ Then we can set up how Rosetta is run:
 
 * ``-frags_3mers`` – location of the 3 residue fragment from the Robetta server.
 * ``-frags_9mers`` – location of the 9 residue fragment from the Robetta server.
-* ``-nmodels`` – (optional, default 500) flag to specify the number of models we want to make with ROSETTA. In this case we use 30 models however for a typical AMPLE run we use 1000.
+* ``-nmodels`` – (optional, default 500) flag to specify the number of models we want to make with ROSETTA.
+
+.. note::
+   In this test case only 30 models are created as we known Rosetta models this structure well . However, in a typical AMPLE run we will generate at least 500 models to increase the likelihood that the correct fold is modelled.
+
 * ``-multimer_modelling`` - (optional, default monomer) flag to activate the modelling of multimers instead of monomers. Options: [Dimer | Trimer | Tetramer]
 
 Finally we can specify some options about how AMPLE will run. Here we use:
@@ -62,8 +66,10 @@ Finally we can specify some options about how AMPLE will run. Here we use:
 .. note::
    The number of molecules places in the ASU can be different from the number of molecules modelled through multimer modelling.
 
-* ``-max_shelxe_resolution`` – (optional, default 3.5) in coiled-coil mode, shelxe is run on data that diffracts up to 3.5 angstroms. This flag can be used to change this threshold.
+* ``-shelxe_rebuild_buccaneer`` – Rebuild SHELXE traced pdb with buccaneer - This can be useful for lower resolution coiled-coil cases.
+* ``-shelxe_max_resolution`` – (optional, default 3.5) in coiled-coil mode, shelxe is run on data that diffracts up to 3.5 angstroms. This flag can be used to increase or lower this threshold.
 * ``-nproc`` – lets you specify how many processors you want to use.
+* ``-show_gui`` - Flag to display the AMPLE gui. This is set by default when running through CCP4i or CCP4i2 but must be manually set on the command line to generate the output GUI shown below.
 
 For a full list possible options see :ref:`AMPLE options <cl_options>`.
 
@@ -80,6 +86,9 @@ The summary tab contains different sections. Below you can find information abou
 Ensembling Results
 ^^^^^^^^^^^^^^^^^^
 There is a brief summary of the type of truncation that was undertaken and then a table listing each ensemble. The columns of the table are:
+
+.. figure:: ../images/summary_coiled.png
+   :align: center
 
 * **Name:** the name of the ensemble. This is used to name the pdb file and the directory where mrbump carries out molecular replacement.
 * **Truncation Level:** the percentage of the model remaining after the varying residues were pruned away.
@@ -98,7 +107,7 @@ MrBUMP Results
 ^^^^^^^^^^^^^^
 This section displays a table with the results of running MrBUMP on each of the ensembles, for this example you will have information for the following headings.
 
-.. figure:: ../images/summary_coil.png
+.. figure:: ../images/summary_coiled_2.png
    :align: center
 
 * **ensemble_name:** this matches the name from the ensemble section.
@@ -122,7 +131,7 @@ Results
 -------
 The Results tab displays the final results of AMPLE after running MrBUMP on the ensembles.
 
-.. figure:: ../images/results_coil.png
+.. figure:: ../images/results_coiled.png
    :align: center
 
 The tab is split into two sections. The upper section shows the top three results as ranked by their SHELXE CC score. The lower section shows the top three results as ranked by their PHASER TFZ score. These may or may not be different. Within each section, the left-hand menu displays a list of ensemble names – these match the names from the Ensembles section in the Summary tab. Clicking on any item will display the results for that ensemble in the central pane. At the top is a table that matches the MrBUMP entry from the Summary tab, and there are then sections for the files output by each program run by MrBUMP. The files can either be displayed directly or opened directly with COOT or CCP4MG using the displayed buttons.
@@ -137,14 +146,14 @@ Log File
 --------
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
-.. figure:: ../images/log_coil.png
+.. figure:: ../images/log_coiled.png
    :align: center
 
 Citations
 ---------
 This section lists the programs and algoriths that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
 
-.. figure:: ../images/citation_coil.png
+.. figure:: ../images/citation_coiled.png
    :align: center
 
 ------------------------------------------------------------------

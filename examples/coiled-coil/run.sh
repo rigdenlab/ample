@@ -21,9 +21,11 @@ $CCP4/bin/ample \
 -multimer_modelling tetramer \
 -nmodels 30 \
 -nmasu 2 \
+-coiled_coil True \
 -shelxe_rebuild_buccaneer True \
 -shelxe_max_resolution 4 \
--nproc 5 \
+-nproc 10 \
+-show_gui True \
 -models ../../../testfiles/multimer_models \
 
 # Add below for running in benchmark mode
@@ -35,8 +37,7 @@ $CCP4/bin/ample \
 
 # Additional optional flags
 # Add below to run from pre-made models
-#-make_models False \
-#-models ../../testfiles/multimer_models \
+#-models ../../../testfiles/multimer_models \
 
 # Add below for running in benchmark mode
 #-native_pdb  input/1g1j.pdb \
