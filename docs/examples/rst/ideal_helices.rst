@@ -24,14 +24,14 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/ideal-helices/run.sh
    :language: bash
-   :lines: 15-24
+   :lines: 12-18
 
 Windows
 ^^^^^^^
 
 .. literalinclude:: /../examples/ideal-helices/run.bat
    :language: batch
-   :lines: 3-9
+   :lines: 6-13
 
 First we provide the location of the input files. This is done with the following flags:
 
@@ -46,6 +46,7 @@ Finally we provide some options about how AMPLE will run:
 
 * ``-use_shelxe`` – specifies whether we should use shelxe or not.
 * ``-nproc`` – lets you specify how many processors you want to use.
+* ``-show_gui`` - Flag to display the AMPLE gui. This is set by default when running through CCP4i or CCP4i2 but must be manually set on the command line to generate the output GUI shown below.
 
 For a full list possible options see :ref:`AMPLE options <cl_options>`.
 

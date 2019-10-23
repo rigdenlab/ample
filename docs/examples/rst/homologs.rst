@@ -23,14 +23,14 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/homologs/run.sh
    :language: bash
-   :lines: 12-17
+   :lines: 12-18
 
 Windows
 ^^^^^^^
 
 .. literalinclude:: /../examples/homologs/run.bat
    :language: batch
-   :lines: 6-11
+   :lines: 6-12
 
 We need to provide the locations of our input files, this is done using the following flag:
 
@@ -58,25 +58,8 @@ Summary tab
 -----------
 This is divided into two sections that display a summary of the results of the ensembling process and the results of the Molecular Replacement with MrBUMP respectively:
 
-.. figure:: ../images/homologs_summary.png
+.. figure:: ../images/summary_homologs.png
    :align: center
-
-Ensembling Results
-^^^^^^^^^^^^^^^^^^
-There is a brief summary of the type of truncation that was undertaken and then a table listing each ensemble. The columns of the table are:
-
-* **Name:** the name of the ensemble. This is used to name the pdb file and the directory where mrbump carries out molecular replacement.
-* **Truncation Level:** the percentage of the model remaining after the varying residues were pruned away.
-* **Variance Threshold:** AMPLE constructs ensembles by pruning back the most variable residues based on their variance as calculated by THESEUS. The variance threshold is the THESEUS variance score for the most variable residue that remains in this ensemble.
-* **No. Residues:** the number of residues for each model in the ensemble.
-* **Radius Threshold:** the truncated models are sub-clustered after truncation under 3 different radius thresholds to create the ensemble, and this is the radius used for this sub-cluster.
-* **No. Decoys:** the number of models within this ensemble.
-* **Number of Atoms:** the number of atoms for each model in the ensemble.
-* **Sidechain Treatment:**
-
-  * *allatom* – all sidechains were retained
-  * *reliable* – MET, ASP, PRO, GLN, LYS, ARG, GLU, SER were retained
-  * *polyAla* – all sidechains were stripped back to polyalanine
 
 MrBUMP Results
 ^^^^^^^^^^^^^^
@@ -103,7 +86,7 @@ Results
 -------
 The Results tab displays the final results of AMPLE after running MrBUMP on the ensembles.
 
-.. figure:: ../images/homologs_results.png
+.. figure:: ../images/results_homologs.png
    :align: center
 
 The tab is split into two sections. The upper section shows the top three results as ranked by their SHELXE CC score. The lower section shows the top three results as ranked by their PHASER TFZ score. These may or may not be different. Within each section, the left-hand menu displays a list of ensemble names – these match the names from the Ensembles section in the Summary tab. Clicking on any item will display the results for that ensemble in the central pane. At the top is a table that matches the MrBUMP entry from the Summary tab, and there are then sections for the files output by each program run by MrBUMP. The files can either be displayed directly or opened directly with COOT or CCP4MG using the displayed buttons.
@@ -115,6 +98,15 @@ Log File
 --------
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
-.. figure:: ../images/homologs_log.png
+.. figure:: ../images/log_homologs.png
    :align: center
+
+Citations
+---------
+This section lists the programs and algoriths that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
+
+.. figure:: ../images/citation_homologs.png
+   :align: center
+
+------------------------------------------------------------------
 
