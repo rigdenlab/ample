@@ -51,7 +51,7 @@ Then we can set up how Rosetta is run:
 
 * ``-frags_3mers`` – location of the 3 residue fragment from the Robetta server.
 * ``-frags_9mers`` – location of the 9 residue fragment from the Robetta server.
-* ``-nmodels`` – (optional, default 500) flag to specify the number of models we want to make with ROSETTA.
+* ``-nmodels`` – (optional, default 1000) flag to specify the number of models we want to make with ROSETTA.
 
 .. note::
    In this test case only 30 models are created as we known Rosetta models this structure well . However, in a typical AMPLE run we will generate at least 500 models to increase the likelihood that the correct fold is modelled.

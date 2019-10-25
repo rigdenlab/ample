@@ -4,7 +4,7 @@
 Ab initio Modelling of Proteins for moLEcular replacement
 *********************************************************
 
-**AMPLE is a pipeline for unconventional Molecular Replacement** A full description of the pipeline can be found :ref:`here <description>`.
+**AMPLE is a pipeline for unconventional Molecular Replacement** A full description of the pipeline can be found `here <https://ample.readthedocs.io/en/latest/description.html>`_.
 
 .. image:: https://readthedocs.org/projects/ample/badge/?version=latest
    :target: http://ample.readthedocs.io/en/latest/?badge=latest
@@ -23,10 +23,10 @@ Key Features
 - Molecular Replacement using ideal helices
 - Molecular Replacement for coiled-coil proteins
 
-Examples of the above can be found :ref:`here <examples>`.
+Examples of the above can be found `here <https://ample.readthedocs.io/en/latest/examples.html>`_.
 
 
 Command line options
 ++++++++++++++++++++
 
-A list of command line options for AMPLE are available :ref:`here <cl_options>`.
+A list of command line options for AMPLE are available `here <https://ample.readthedocs.io/en/latest/api/cloptions.html>`_.
