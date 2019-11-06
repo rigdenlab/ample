@@ -9,6 +9,11 @@
 
        :ref:`Show <example_ccp4i2_abinitio>`
 
+   * - - Database derived models
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_ccp4i2_metagenomic>`
+
 .. list-table:: Command line examples
    :class: table-hover
    :widths: 1200, 10
