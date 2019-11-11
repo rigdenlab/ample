@@ -9,6 +9,16 @@
 
        :ref:`Show <example_ccp4i2_abinitio>`
 
+   * - - Ideal helices
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_ccp4i2_ideal_helices>`
+
+   * - - Coiled-coils
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_ccp4i2_coiled>`
+
    * - - Database derived models
      - .. cssclass:: btn btn-primary btn-sm btn-example
 
@@ -40,3 +50,8 @@
      - .. cssclass:: btn btn-primary btn-sm btn-example
 
        :ref:`Show <example_coiled_coil>`
+
+   * - - Database derived models
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_metagenomic>`
