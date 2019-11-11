@@ -1,4 +1,4 @@
-.. _example_ccp4i2_abinitio:
+.. _example_ccp4i2_coiled:
 
 ========================
 Using *ab initio* models
@@ -39,7 +39,6 @@ On the submission page there are a number of input options:
 .. note::
     A Coiled-coil option will also be available soon
 
-
 Advanced options
 ----------------
 
@@ -76,12 +75,20 @@ The FASTA and MTZ files can be submitted into the fields described above
 
 When running Rosetta the following options need to be input:
 
-.. figure:: ../images/ccp4i2_input_toxd.png
+.. figure:: ../images/ccp4i2_input_coiled.png
    :align: center
 
 1. The path to the Rosetta installation
 2. location of the 3 residue fragment from the Robetta server
 3. location of the 9 residue fragment from the Robetta server
+
+Additionally when running a coiled-coil job, a few advanced options need to be input:
+
+.. figure:: ../images/ccp4i2_advanced_input_coiled.png
+   :align: center
+
+.. note::
+   AMPLE's CCP4i2 interface is going to be modified to contain coiled-coil specific options in the near future.
 
 Once these options have been selected the job can be set running.
 
@@ -97,7 +104,7 @@ Ensembling Results
 ^^^^^^^^^^^^^^^^^^
 There is a brief summary of the type of truncation that was undertaken and then a table listing each ensemble. The columns of the table are:
 
-.. figure:: ../images/ccp4i2_summary_ensembling_toxd.png
+.. figure:: ../images/ccp4i2_summary_ensembling_coiled.png
    :align: center
 
 * **Name:** the name of the ensemble. This is used to name the pdb file and the directory where mrbump carries out molecular replacement.
@@ -117,7 +124,7 @@ MrBUMP Results
 ^^^^^^^^^^^^^^
 This section displays a table with the results of running MrBUMP on each of the ensembles, for this example you will have information for the following headings.
 
-.. figure:: ../images/ccp4i2_summary_mrbump_toxd.png
+.. figure:: ../images/ccp4i2_summary_mrbump_coiled.png
    :align: center
 
 * **ensemble_name:** this matches the name from the ensemble section.
@@ -143,7 +150,7 @@ Results
 -------
 The Results tab displays the final results of AMPLE after running MrBUMP on the ensembles.
 
-.. figure:: ../images/ccp4i2_results_toxd.png
+.. figure:: ../images/ccp4i2_results_coiled.png
    :align: center
 
 AMPLE output the atomic models, MTZ and map coefficients for the top 3 solutions in the AMPLE run.
@@ -155,11 +162,5 @@ Citations
 ---------
 This section lists the programs and algoriths that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
 
-.. figure:: ../images/ccp4i2_citation_toxd.png
+.. figure:: ../images/ccp4i2_citation_coiled.png
    :align: center
-
-
-
-
-
-

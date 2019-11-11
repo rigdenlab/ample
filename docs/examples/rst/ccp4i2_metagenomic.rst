@@ -65,7 +65,7 @@ AMPLE Setup
 
 The FASTA and MTZ files can be submitted into the fields described above
 
-When running Rosetta the following options need to be input:
+When using covariance derived models the following options need to be input:
 
 .. figure:: ../images/ccp4i2_input_metagenomic.png
    :align: center

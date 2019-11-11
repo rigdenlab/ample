@@ -1,10 +1,12 @@
-.. _example_ideal_helices:
+.. _example_metagenomic:
 
-===================
-Using ideal helices
-===================
+===================================
+Using models derived from databases
+===================================
 
-AMPLE can perform Molecular Replacement using a small library of ideal helices. This method requires no modelling and therefore is often very quick.
+Covariance-assisted *ab initio* models representing structurally uncharacterised Pfam families are now available on a large scale in databases such as the `GREMLIN database <https://gremlin2.bakerlab.org/meta_struct.php>`_ and the `PconsFam database <http://pconsfam.bioinfo.se/>`_. If models are available for your target protein, these models can be used in AMPLE.
+
+------------------------------------------------------------------
 
 Running AMPLE
 =============
@@ -22,14 +24,14 @@ System-dependent example scripts to run AMPLE are shown below:
 UNIX (Linux|Mac)
 ^^^^^^^^^^^^^^^^
 
-.. literalinclude:: /../examples/ideal-helices/run.sh
+.. literalinclude:: /../examples/metagenomic/run.sh
    :language: bash
    :lines: 12-18
 
 Windows
 ^^^^^^^
 
-.. literalinclude:: /../examples/ideal-helices/run.bat
+.. literalinclude:: /../examples/metagenomic-helices/run.bat
    :language: batch
    :lines: 6-13
 
@@ -40,11 +42,10 @@ First we provide the location of the input files. This is done with the followin
 
 Next we provide the flag that tells AMPLE to run in ideal helices mode:
 
-* ``-ideal_helices`` - specifies whether the job should be run in ideal helices mode
+* ``-models`` - specifies the path to the directory of the covariance-assisted *ab initio* models
 
 Finally we provide some options about how AMPLE will run:
 
-* ``-use_shelxe`` – specifies whether we should use shelxe or not.
 * ``-nproc`` – lets you specify how many processors you want to use.
 * ``-show_gui`` - Flag to display the AMPLE gui. This is set by default when running through CCP4i or CCP4i2 but must be manually set on the command line to generate the output GUI shown below.
 
@@ -59,13 +60,34 @@ On starting a separate window will appear summarising the progress of AMPLE and 
 
 Summary
 -------
-The summary tab contains information about the search from MrBUMP
+The summary tab contains different sections. Below you can find information about each:
+
+Ensembling Results
+^^^^^^^^^^^^^^^^^^
+
+.. figure:: ../images/summary_ensembling_metagenomic.png
+   :align: center
+
+There is a brief summary of the type of truncation that was undertaken and then a table listing each ensemble. The columns of the table are:
+
+* **Name:** the name of the ensemble. This is used to name the pdb file and the directory where mrbump carries out molecular replacement.
+* **Truncation Level:** the percentage of the model remaining after the varying residues were pruned away.
+* **Variance Threshold:** AMPLE constructs ensembles by pruning back the most variable residues based on their variance as calculated by THESEUS. The variance threshold is the THESEUS variance score for the most variable residue that remains in this ensemble.
+* **No. Residues:** the number of residues for each model in the ensemble.
+* **Radius Threshold:** the truncated models are sub-clustered after truncation under 3 different radius thresholds to create the ensemble, and this is the radius used for this sub-cluster.
+* **No. Decoys:** the number of models within this ensemble.
+* **Number of Atoms:** the number of atoms for each model in the ensemble.
+* **Sidechain Treatment:**
+
+  * *allatom* – all sidechains were retained
+  * *reliable* – MET, ASP, PRO, GLN, LYS, ARG, GLU, SER were retained
+  * *polyAla* – all sidechains were stripped back to polyalanine
 
 MrBUMP Results
 ^^^^^^^^^^^^^^
 This section displays a table with the results of running MrBUMP on each of the ensembles, for this example you will have information for the following headings.
 
-.. figure:: ../images/summary_ideal.png
+.. figure:: ../images/summary_mrbump_metagenomic.png
    :align: center
 
 * **ensemble_name:** this matches the name from the ensemble section.
@@ -89,7 +111,7 @@ Results
 -------
 The Results tab displays the final results of AMPLE after running MrBUMP on the ensembles.
 
-.. figure:: ../images/results_ideal.png
+.. figure:: ../images/results_metagenomic.png
    :align: center
 
 The tab is split into two sections. The upper section shows the top three results as ranked by their SHELXE CC score. The lower section shows the top three results as ranked by their PHASER TFZ score. These may or may not be different. Within each section, the left-hand menu displays a list of ensemble names. Clicking on any item will display the results for that ensemble in the central pane. At the top is a table that matches the MrBUMP entry from the Summary tab, and there are then sections for the files output by each program run by MrBUMP. The files can either be displayed directly or opened directly with COOT or CCP4MG using the displayed buttons.
@@ -104,13 +126,12 @@ Log File
 --------
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
-.. figure:: ../images/log_ideal.png
+.. figure:: ../images/log_metagenomic.png
    :align: center
 
 Citations
 ---------
 This section lists the programs and algoriths that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
 
-.. figure:: ../images/citation_ideal.png
+.. figure:: ../images/citation_metagenomic.png
    :align: center
-
