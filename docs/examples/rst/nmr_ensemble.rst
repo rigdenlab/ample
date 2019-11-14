@@ -19,7 +19,7 @@ Input Files
 AMPLE requires a FASTA file and an MTZ file in order to run. For molecular replacement with ensembles created from NMR ensembles you must also supply the NMR model. 
 
 .. note::
-   You can download all the data files `here <hhttps://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
+   You can download all the data files `here <https://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
 
 AMPLE Setup
 -----------
@@ -57,7 +57,7 @@ For a full list of options see :ref:`AMPLE options <cl_options>`.
 
 AMPLE Output
 ============
-On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to three tabs, the contents of which are explained below:
+On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to four tabs, the contents of which are explained below:
 
 Summary tab
 -----------

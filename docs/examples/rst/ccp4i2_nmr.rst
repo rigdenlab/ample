@@ -1,15 +1,11 @@
-.. _example_ccp4i2_coiled:
+.. _example_ccp4i2_nmr_ensemble:
 
-========================
-Using *ab initio* models
-========================
+=====================
+Using an NMR ensemble
+=====================
 
-Rosetta Installation
-====================
-ROSETTA must be installed on the local system before AMPLE can be used to generate *ab inito* models. AMPLE needs to know the location of the ROSETTA installation in order to find all of the various tools it needs for creating decoy structures. Please ensure that the path to the ROSETTA top level directory is specified in the interface or with the ``-rosetta_dir`` flag if using a script.
+AMPLE can attempt molecular replacement with ensembles created from NMR ensembles. In the simplest case, AMPLE will split an NMR ensemble into its constituent models and carry out its standard truncation/clustering algorithm to generate the ensembles. When used in this way, ROSETTA is not required to be installed.
 
-.. note::
-   ROSETTA is a comprehensive package and requires compilation from source code. For a detailed explanation about how to install ROSETTA see `ROSETTA installation`_.
 
 ------------------------------------------------------------------
 
@@ -55,40 +51,22 @@ This provides options relating to:
 
 For a full list possible options see :ref:`AMPLE options <cl_options>`.
 
-Example
-=======
 Input Files
 -----------
-AMPLE requires a FASTA file and an MTZ file in order to run. There are some other files required, which will be described below.
+AMPLE requires a FASTA file and an MTZ file in order to run. For molecular replacement with ensembles created from NMR ensembles you must also supply the NMR model.
 
 .. note::
-   You can download all the data files `here <hhttps://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
-
-Rosetta Input Files
--------------------
-For *ab initio* modelling ROSETTA requires Robetta fragment files (3 and 9 residues), (fragment files can be generated using the `Robetta online server`_. Note that registration is required for this service). For this example these fragment files have already been calculated and part of the downloaded files.
+   You can download all the data files `here <https://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
 
 AMPLE Setup
 -----------
 
 The FASTA and MTZ files can be submitted into the fields described above
 
-When running Rosetta the following options need to be input:
+When using NMR ensembles the following options need to be input:
 
-.. figure:: ../images/ccp4i2_input_coiled.png
+.. figure:: ../images/ccp4i2_input_nmr.png
    :align: center
-
-1. The path to the Rosetta installation
-2. location of the 3 residue fragment from the Robetta server
-3. location of the 9 residue fragment from the Robetta server
-
-Additionally when running a coiled-coil job, a few advanced options need to be input:
-
-.. figure:: ../images/ccp4i2_advanced_input_coiled.png
-   :align: center
-
-.. note::
-   AMPLE's CCP4i2 interface is going to be modified to contain coiled-coil specific options in the near future.
 
 Once these options have been selected the job can be set running.
 
@@ -104,7 +82,7 @@ Ensembling Results
 ^^^^^^^^^^^^^^^^^^
 There is a brief summary of the type of truncation that was undertaken and then a table listing each ensemble. The columns of the table are:
 
-.. figure:: ../images/ccp4i2_summary_ensembling_coiled.png
+.. figure:: ../images/ccp4i2_summary_ensembling_nmr.png
    :align: center
 
 * **Name:** the name of the ensemble. This is used to name the pdb file and the directory where mrbump carries out molecular replacement.
@@ -124,7 +102,7 @@ MrBUMP Results
 ^^^^^^^^^^^^^^
 This section displays a table with the results of running MrBUMP on each of the ensembles, for this example you will have information for the following headings.
 
-.. figure:: ../images/ccp4i2_summary_mrbump_coiled.png
+.. figure:: ../images/ccp4i2_summary_mrbump_nmr.png
    :align: center
 
 * **ensemble_name:** this matches the name from the ensemble section.
@@ -150,7 +128,7 @@ Results
 -------
 The Results tab displays the final results of AMPLE after running MrBUMP on the ensembles.
 
-.. figure:: ../images/ccp4i2_results_coiled.png
+.. figure:: ../images/ccp4i2_results_nmr.png
    :align: center
 
 AMPLE output the atomic models, MTZ and map coefficients for the top 3 solutions in the AMPLE run.
@@ -162,5 +140,5 @@ Citations
 ---------
 This section lists the programs and algorithms that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
 
-.. figure:: ../images/ccp4i2_citation_coiled.png
+.. figure:: ../images/ccp4i2_citation_nmr.png
    :align: center

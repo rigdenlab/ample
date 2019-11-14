@@ -9,6 +9,15 @@
 
        :ref:`Show <example_ccp4i2_abinitio>`
 
+   * - - Multiple Distant Homologs
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_ccp4i2_dist_homologs>`
+   * - - NMR ensembles
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_ccp4i2_nmr_ensemble>`
+
    * - - Ideal helices
      - .. cssclass:: btn btn-primary btn-sm btn-example
 
@@ -55,3 +64,12 @@
      - .. cssclass:: btn btn-primary btn-sm btn-example
 
        :ref:`Show <example_metagenomic>`
+
+.. list-table:: CCP4 online examples
+   :class: table-hover
+   :widths: 1200, 10
+
+   * - - *Ab initio* models
+     - .. cssclass:: btn btn-primary btn-sm btn-example
+
+       :ref:`Show <example_ccp4online_abinitio>`

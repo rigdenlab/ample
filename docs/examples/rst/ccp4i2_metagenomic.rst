@@ -29,7 +29,7 @@ On the submission page there are a number of input options:
 1. Input sequence – Path to the FASTA file
 2. Input MTZ - Path to the MTZ file
 3. Protein classification - Globular or Transmembrane
-4. Model selection or building - select between a directory of existing models or create *ab initio* models locally (shown below).
+4. Model selection or building - select between a directory of existing models,  a library of ideal helices or create *ab initio* models locally (shown below).
 
 .. note::
     A Coiled-coil option will also be available soon
@@ -76,7 +76,7 @@ Once these options have been selected the job can be set running.
 
 AMPLE Output
 ============
-On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to three tabs, the contents of which are explained below:
+Upon starting a results tab will appear within the CCP4i2 interface summarising the progress of the AMPLE run. This will contain the following sections:
 
 Summary
 -------
@@ -142,7 +142,7 @@ AMPLE output the atomic models, MTZ and map coefficients for the top 3 solutions
 
 Citations
 ---------
-This section lists the programs and algoriths that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
+This section lists the programs and algorithms that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
 
 .. figure:: ../images/ccp4i2_citation_metagenomic.png
    :align: center

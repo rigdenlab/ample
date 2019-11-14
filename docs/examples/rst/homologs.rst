@@ -52,7 +52,7 @@ For a full list of options see :ref:`AMPLE options <cl_options>`.
 
 AMPLE Output
 ============
-On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to three tabs, the contents of which are explained below:
+On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to four tabs, the contents of which are explained below:
 
 Summary tab
 -----------

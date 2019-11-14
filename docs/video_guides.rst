@@ -1,10 +1,10 @@
 .. _videos:
 
-***************
-Video Tutorials
-***************
+************
+Video Guides
+************
 
-The following video tutorials provide information about when and how to run AMPLE.
+The following video guides provide information about when and how to run AMPLE.
 
 .. raw:: html
 

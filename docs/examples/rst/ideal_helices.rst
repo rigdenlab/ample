@@ -13,7 +13,7 @@ Input Files
 AMPLE requires a FASTA file and an MTZ file in order to run. There are some other files required, which will be described below.
 
 .. note::
-   You can download all the data files `here <hhttps://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
+   You can download all the data files `here <https://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
 
 AMPLE Setup
 -----------
