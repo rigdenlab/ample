@@ -1,4 +1,3 @@
-..
 
 *********************************************************
 Ab initio Modelling of Proteins for moLEcular replacement
@@ -22,6 +21,7 @@ Key Features
 - Molecular Replacement using NMR ensembles
 - Molecular Replacement using ideal helices
 - Molecular Replacement for coiled-coil proteins
+- Molecular Replacement using models derived from online databases
 
 Examples of the above can be found `here <https://ample.readthedocs.io/en/latest/examples.html>`_.
 
