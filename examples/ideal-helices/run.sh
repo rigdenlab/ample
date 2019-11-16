@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 
-# Script to run toxd test case
+# Script to run ideal helix test case
 #
 
 # Set path to include where shelxe is located
@@ -15,3 +15,5 @@ $CCP4/bin/ample \
 -use_shelxe True \
 -ideal_helices True \
 -nproc 8 \
+-show_gui True \
+ 

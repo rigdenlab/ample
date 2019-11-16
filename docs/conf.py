@@ -169,6 +169,7 @@ html_theme_options = {
     'navbar_links': [
         ('Home', 'index'),
         ('Description', 'description'),
+        ('Video guides', 'video_guides'),
         ('Examples', 'examples'),
         ('Server', 'server'),
         ('Documentation', 'contents'),

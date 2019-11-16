@@ -8,4 +8,5 @@ set PATH=C:\Users\jmht42\Shelx\shelx64;%PATH%
 -mtz input\2OVC-cad.mtz ^
 -use_shelxe True ^
 -ideal_helices True ^
--nproc 8 
+-nproc 8 ^
+-show_gui True

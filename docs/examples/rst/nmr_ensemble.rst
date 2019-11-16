@@ -19,7 +19,7 @@ Input Files
 AMPLE requires a FASTA file and an MTZ file in order to run. For molecular replacement with ensembles created from NMR ensembles you must also supply the NMR model. 
 
 .. note::
-   You can download all the data files `here <hhttps://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
+   You can download all the data files `here <https://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
 
 AMPLE Setup
 -----------
@@ -30,14 +30,14 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/nmr-truncate/run.sh
    :language: bash
-   :lines: 11-16
+   :lines: 11-17
 
 Windows
 ^^^^^^^
 
 .. literalinclude:: /../examples/nmr-truncate/run.bat
    :language: batch
-   :lines: 9-14
+   :lines: 9-15
 
 We need to provide the locations of our input files, this is done using the following flag:
 
@@ -57,7 +57,7 @@ For a full list of options see :ref:`AMPLE options <cl_options>`.
 
 AMPLE Output
 ============
-On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to three tabs, the contents of which are explained below:
+On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to four tabs, the contents of which are explained below:
 
 Summary tab
 -----------
@@ -122,3 +122,13 @@ This displays the text output by AMPLE as it is running. Any problems or errors 
 
 .. figure:: ../images/log_nmr.png
    :align: center
+
+Citations
+---------
+This section lists the programs and algoriths that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
+
+.. figure:: ../images/citation_nmr.png
+   :align: center
+
+------------------------------------------------------------------
+

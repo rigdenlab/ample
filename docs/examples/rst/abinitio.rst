@@ -20,7 +20,7 @@ Input Files
 AMPLE requires a FASTA file and an MTZ file in order to run. There are some other files required, which will be described below.
 
 .. note::
-   You can download all the data files `here <hhttps://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
+   You can download all the data files `here <https://github.com/rigdenlab/ample-examples/archive/master.zip>`_.
 
 Rosetta Input Files
 -------------------
@@ -35,14 +35,14 @@ UNIX (Linux|Mac)
 
 .. literalinclude:: /../examples/toxd-example/run.sh
    :language: bash
-   :lines: 15-24
+   :lines: 15-25
 
 Windows
 ^^^^^^^
 
 .. literalinclude:: /../examples/toxd-example/run.bat
    :language: batch
-   :lines: 3-9
+   :lines: 3-10
 
 First we set the path to the location where ROSETTA is installed. This is then input into ample using the ``-rosetta_dir`` flag.
 
@@ -55,7 +55,10 @@ Next we need to provide the locations of our input files, this is done using the
 
 * ``-frags_3mers`` – location of the 3 residue fragment from the Robetta server.
 * ``-frags_9mers`` – location of the 9 residue fragment from the Robetta server.
-* ``-nmodels`` – flag to specify the number of models we want to make with ROSETTA. In this case we use 30 models however for a typical AMPLE run we use 1000.
+* ``-nmodels`` – (optional, default 1000) flag to specify the number of models we want to make with ROSETTA.
+
+.. note::
+   In this test case only 30 models are created as we known Rosetta models this structure well . However, in a typical AMPLE run we will generate at least 500 models to increase the likelihood that the correct fold is modelled.
 
 .. note:: 
    Models for AMPLE can also be generated using the `QUARK online server`_. This is particularly useful, if you are running Windows or do not have access to a local Rosetta installation. 
@@ -73,7 +76,7 @@ For a full list possible options see :ref:`AMPLE options <cl_options>`.
 
 AMPLE Output
 ============
-On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to three tabs, the contents of which are explained below:
+On starting a separate window will appear summarising the progress of AMPLE and any results. The window will contain up to four tabs, the contents of which are explained below:
 
 Summary
 -------
@@ -140,6 +143,13 @@ Log File
 This displays the text output by AMPLE as it is running. Any problems or errors will be displayed here.
 
 .. figure:: ../images/log_toxd.png
+   :align: center
+
+Citations
+---------
+This section lists the programs and algoriths that are using in the AMPLE job and gives a list of references to be cited should AMPLE find a solution.
+
+.. figure:: ../images/citation_toxd.png
    :align: center
 
 ------------------------------------------------------------------
