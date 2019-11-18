@@ -11,9 +11,9 @@ import uuid
 
 from iotbx import reflection_file_reader
 
-import ample_util  # Avoid circular dependencies
-import exit_util
-import cif_parser  # Avoid circular dependencies
+from ample.util import ample_util
+from ample.util import cif_parser
+from ample.util import exit_util
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -167,7 +167,11 @@ def processReflectionFile(amoptd):
             exit_util.exit_error(msg)
 
         cp = cif_parser.CifParser()
-        amoptd['mtz'] = cp.sfcif2mtz(amoptd['sf_cif'])
+        # See if reflections have been set aside for Rfree or if we need to calculate
+        if cp.hasRfree and cp.reflnStatus:
+            logger.info("sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
+            mtz = cp.sfcif2mtz(amoptd['sf_cif'])
+            amoptd['mtz'] = del_column(mtz, 'FREE')
 
     # Now have an mtz so check it's valid
     if not amoptd['mtz'] or not os.path.isfile(amoptd['mtz']):

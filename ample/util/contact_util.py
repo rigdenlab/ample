@@ -698,7 +698,7 @@ class ContactUtil(object):
 
 def _create_parsers():
     DISABLE = ["casprr", "flib", "genericstructure"]
-    parsers = conkit.io.CONTACT_FILE_PARSERS.keys()
+    parsers = list(conkit.io.CONTACT_FILE_PARSERS.keys())
     for d in DISABLE:
         if d in parsers:
             parsers.pop(parsers.index(d))

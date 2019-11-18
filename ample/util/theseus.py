@@ -1,8 +1,8 @@
-'''
+"""
 Created on 26 May 2015
 
 @author: jmht
-'''
+"""
 import collections
 import logging
 import os

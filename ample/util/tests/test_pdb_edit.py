@@ -2694,17 +2694,6 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
 
         os.unlink(pdbout)
 
-    def testSequence1(self):
-        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
-        ref = {
-            'A': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
-            'B': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
-            'C': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
-        }
-        s = pdb_edit.sequence(pdbin)
-        self.assertEqual(ref, s, "Bad _sequecne: {0}".format(s))
-        return
-
     def testStdResidues(self):
 
         pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")

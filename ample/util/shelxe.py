@@ -1,9 +1,9 @@
 #!/usr/bin/env ccp4-python
-'''
+"""
 Created on 2 Feb 2015
 
 @author: jmht
-'''
+"""
 import logging
 import os
 import shutil

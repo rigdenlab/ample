@@ -8,9 +8,9 @@ import phaser
 import iotbx.pdb
 import iotbx.mtz
 
-from ample.util import pdb_edit
 from ample.util import ample_util
 from ample.util import mtz_util
+from ample.util import pdb_edit
 
 logger = logging.getLogger(__name__)
 

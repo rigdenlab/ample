@@ -1,10 +1,10 @@
-'''
+"""
 Created on 18 Feb 2013
 
 @author: jmht
 
 Query the octopus server http://octopus.cbr.su.se to get transmembrane predictions
-'''
+"""
 
 import logging
 import os

@@ -1,8 +1,8 @@
-'''
+"""
 Created on 21 Feb 2013
 
 @author: jmht
-'''
+"""
 
 # Python modules
 import copy
@@ -15,10 +15,7 @@ import shutil
 # Our modules
 from ample.modelling import energy_functions, octopus_predict, multimer_definitions
 from ample.parsers import psipred_parser
-from ample.util import ample_util
-from ample.util import pdb_edit
-from ample.util import sequence_util
-from ample.util import workers_util
+from ample.util import ample_util, pdb_edit, sequence_util, workers_util
 
 logger = logging.getLogger(__name__)
 
@@ -359,7 +356,7 @@ class RosettaModel(object):
     def process_multimer_models(self, modelsin):
         """Merge the multi-chain pdbs into a single chain"""
         # Work out how many chains we're using
-        chaind = pdb_edit.sequence_data(modelsin[0])
+        chaind = sequence_util.sequence_data(modelsin[0])
         chains = None
         if self.num_chains and self.num_chains < len(chaind):
             # for now we just assume we want continguous ones

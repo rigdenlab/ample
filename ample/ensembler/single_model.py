@@ -11,8 +11,7 @@ import pandas as pd
 import _ensembler
 import truncation_util
 from constants import SIDE_CHAIN_TREATMENTS
-from ample.util import ample_util
-from ample.util import pdb_edit
+from ample.util import ample_util, pdb_edit
 
 logger = logging.getLogger(__name__)
 

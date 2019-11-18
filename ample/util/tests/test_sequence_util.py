@@ -13,6 +13,17 @@ class Test(unittest.TestCase):
         cls.ample_share = constants.SHARE_DIR
         cls.testfiles_dir = os.path.join(cls.ample_share, 'testfiles')
 
+    def testSequence1(self):
+        pdbin = os.path.join(self.testfiles_dir, "4DZN.pdb")
+        ref = {
+            'A': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
+            'B': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
+            'C': 'GEIAALKQEIAALKKEIAALKEIAALKQGYY',
+        }
+        s = sequence_util.sequence(pdbin)
+        self.assertEqual(ref, s, "Bad sequence: {0}".format(s))
+        return
+
     def test_add(self):
         s1 = sequence_util.Sequence(pdb=os.path.join(self.testfiles_dir, '1GU8.pdb'))
         s2 = sequence_util.Sequence(fasta=os.path.join(self.testfiles_dir, '2uui.fasta'))

@@ -13,6 +13,7 @@ import tarfile
 import tempfile
 import warnings
 import zipfile
+from iotbx.pdb import amino_acid_codes
 
 from ample.util import ccp4
 from ample.util import exit_util
@@ -33,6 +34,9 @@ class FileNotFoundError(Exception):
 # and we need to a Null handler
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+three2one = amino_acid_codes.one_letter_given_three_letter
+one2three = amino_acid_codes.three_letter_given_one_letter
 
 
 def amoptd_fix_path(optd, newroot):

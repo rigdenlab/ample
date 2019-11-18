@@ -1,10 +1,8 @@
 #!/usr/bin/env ccp4-python
-'''
-Useful manipulations on PDB files
-'''
+"""Useful manipulations on PDB files"""
 
 # Python imports
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 import copy
 import logging
 import os
@@ -15,40 +13,10 @@ import unittest
 import iotbx.file_reader
 import iotbx.pdb
 
-# iotbx.pdb.amino_acid_codes.one_letter_given_three_letter
-
-import ample_util
-import pdb_model
-import residue_map
-import sequence_util
-
-three2one = {
-    'ALA': 'A',
-    'ARG': 'R',
-    'ASN': 'N',
-    'ASP': 'D',
-    'CYS': 'C',
-    'GLU': 'E',
-    'GLN': 'Q',
-    'GLY': 'G',
-    'HIS': 'H',
-    'ILE': 'I',
-    'LEU': 'L',
-    'LYS': 'K',
-    'MET': 'M',
-    'PHE': 'F',
-    'PRO': 'P',
-    'SER': 'S',
-    'THR': 'T',
-    'TRP': 'W',
-    'TYR': 'Y',
-    'VAL': 'V',
-    'UNK': 'X',
-}
-
-# http://stackoverflow.com/questions/3318625/efficient-bidirectional-hash-table-in-python
-# aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
-one2three = dict((v, k) for (k, v) in three2one.items())
+from ample.util import ample_util
+from ample.util import pdb_model
+from ample.util import residue_map
+from ample.util import sequence_util
 
 logger = logging.getLogger(__name__)
 
@@ -518,7 +486,7 @@ def get_info(inpath):
                 if atom.resSeq != currentResSeq or i == len(atomList) - 1:
                     # End of reading the atoms for a residue
                     model.resSeqs[chainIdx].append(currentResSeq)
-                    model.sequences[chainIdx] += three2one[currentResName]
+                    model.sequences[chainIdx] += ample_util.three2one[currentResName]
 
                     if 'CA' not in atomTypes:
                         model.caMask[chainIdx].append(True)
@@ -891,7 +859,7 @@ def resseq(pdbin):
 
 def _resseq(hierarchy):
     """Extract the sequence of residues from a pdb file."""
-    chain2data = _sequence_data(hierarchy)
+    chain2data = sequence_util._sequence_data(hierarchy)
     return dict((k, chain2data[k][1]) for k in chain2data.keys())
 
 
@@ -1008,54 +976,6 @@ def _select_residues(hierarchy, delete=None, tokeep=None, delete_idx=None, tokee
         if remove:
             chain.remove_residue_group(residue_group)
     return hierarchy
-
-
-def sequence(pdbin):
-    return _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
-
-
-def _sequence(hierarchy):
-    """Extract the sequence of residues from a pdb file."""
-    chain2data = _sequence_data(hierarchy)
-    return dict((k, chain2data[k][0]) for k in chain2data.keys())
-
-
-def _sequence1(hierarchy):
-    """Return sequence of the first chain"""
-    d = _sequence(hierarchy)
-    return d[sorted(d.keys())[0]]
-
-
-def sequence_data(pdbin):
-    return _sequence_data(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
-
-
-def _sequence_data(hierarchy):
-    """Extract the sequence of residues and resseqs from a pdb file."""
-    chain2data = OrderedDict()
-    for chain in hierarchy.models()[0].chains():  # only the first model
-        if not chain.is_protein():
-            continue
-        seq, resseq = chain_data(chain)
-        chain2data[chain.id] = (seq, resseq)
-    return chain2data
-
-
-def chain_data(chain):
-    seq = ""
-    resseq = []
-    for residue in chain.conformers()[0].residues():  # Just look at the first conformer
-        # See if any of the atoms are non-hetero - if so we add this residue
-        if any([not atom.hetero for atom in residue.atoms()]):
-            seq += three2one[residue.resname]
-            resseq.append(residue.resseq_as_int())
-    return seq, resseq
-
-
-def chain_sequence(chain):
-    if not chain.is_protein():
-        return None
-    return chain_data(chain)[0]
 
 
 def split_pdb(pdbin, directory=None, strip_hetatm=False, same_size=False):
@@ -1312,7 +1232,7 @@ def translate(inpdb=None, outpdb=None, ftranslate=None):
 
 
 def xyz_coordinates(pdbin):
-    ''' Extract xyz for all atoms '''
+    """Extract xyz for all atoms """
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     hierarchy = pdb_input.construct_hierarchy()
     return _xyz_coordinates(hierarchy)
@@ -1332,7 +1252,7 @@ def _xyz_coordinates(hierarchy):
 
 
 def xyz_cb_coordinates(pdbin):
-    ''' Extract xyz for CA/CB atoms '''
+    """Extract xyz for CA/CB atoms """
     pdb_input = iotbx.pdb.pdb_input(file_name=pdbin)
     hierarchy = pdb_input.construct_hierarchy()
 
@@ -1360,13 +1280,11 @@ def _xyz_cb_coordinates(hierarchy):
 
 
 def _xyz_atom_coords(atom_group):
-    ''' Use this method if you need to identify if CB is present
-        in atom_group and if not return CA
-    '''
+    """Use this method if you need to identify if CB is present in atom_group and if not return CA"""
 
     tmp_dict = {}
     for atom in atom_group.atoms():
-        if atom.name.strip() in set(["CA", "CB"]):
+        if atom.name.strip() in {"CA", "CB"}:
             tmp_dict[atom.name.strip()] = atom.xyz
 
     if 'CB' in tmp_dict:
@@ -1374,7 +1292,7 @@ def _xyz_atom_coords(atom_group):
     elif 'CA' in tmp_dict:
         return tmp_dict['CA']
     else:
-        return (float('inf'), float('inf'), float('inf'))
+        return float('inf'), float('inf'), float('inf')
 
 
 if __name__ == "__main__":
@@ -1420,10 +1338,10 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file, del_hetatm=True, chain=args.chain)
     elif args.seq:
-        print (sequence_util.Sequence(pdb=args.input_file).fasta_str())
+        print(sequence_util.Sequence(pdb=args.input_file).fasta_str())
     elif args.split_models:
-        print (split_pdb(args.input_file))
+        print(split_pdb(args.input_file))
     elif args.split_chains:
-        print (split_into_chains(args.input_file, chain=args.chain))
+        print(split_into_chains(args.input_file, chain=args.chain))
     elif args.chain:
-        print (extract_chain(args.input_file, args.output_file, chainID=args.chain))
+        print(extract_chain(args.input_file, args.output_file, chainID=args.chain))

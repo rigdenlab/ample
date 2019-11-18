@@ -1,8 +1,8 @@
-'''
+"""
 Created on Feb 28, 2013
 
 @author: jmht
-'''
+"""
 
 import logging
 import multiprocessing

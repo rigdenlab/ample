@@ -26,7 +26,7 @@ def found_exe(e):
 def internet_on():
     # Taken from stackoverflow.com/questions/3764291/checking-network-connection
     try:
-        reponse = urlopen("http://google.com", timeout=5)
+        urlopen("http://google.com", timeout=5)
     except URLError:
         return False
     return True

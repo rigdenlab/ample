@@ -1,8 +1,8 @@
-'''
+"""
 Created on 28 May 2013
 
 @author: jmht
-'''
+"""
 
 import logging
 import os
@@ -11,8 +11,8 @@ import sys
 # Our imports
 from ample.util import ample_util
 from iotbx.cif import reader as cif_reader
-import mtz_util  # Avoid circular dependencies
 
+# TODO: Combine this with MTZ_util - make a reflection_file_util
 
 class CifParser(object):
     """Class for manipulating CIF files."""
@@ -83,11 +83,11 @@ class CifParser(object):
         self._sfcif2mtz(cifPath, mtzPath)
 
         # See if reflections have been set aside for Rfree or if we need to calculate
-        if not self.hasRfree:
-            if self.reflnStatus:
-                # cif2mtz will have added a useless FREE column so we remove it
-                self.logger.info("sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
-                mtzPath = mtz_util.del_column(mtzPath, 'FREE')
+        # if not self.hasRfree:
+        #     if self.reflnStatus:
+        #         # cif2mtz will have added a useless FREE column so we remove it
+        #         self.logger.info("sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
+        #         mtzPath = mtz_util.del_column(mtzPath, 'FREE')
 
         #             # If there are no RFREE
         #             self.logger.info( "sfcif2mtz: no RFree flags so running uniqueify")
