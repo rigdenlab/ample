@@ -8,8 +8,7 @@ import logging
 import os
 import pandas as pd
 
-from ample.ensembler import _ensembler
-from ample.ensembler import truncation_util
+from ample.ensembler import _ensembler, truncation_util
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
 from ample.util import ample_util, pdb_edit
 
