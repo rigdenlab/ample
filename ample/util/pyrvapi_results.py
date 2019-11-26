@@ -7,8 +7,14 @@ import logging
 import json
 import os
 import subprocess
+import sys
 import traceback
-import urlparse
+
+if sys.version_info.major < 3:
+    from urlparse import urljoin
+else:
+    from urllib.parse import urljoin
+
 import uuid
 
 from ample import ensembler
@@ -545,7 +551,7 @@ class AmpleOutput(object):
     def fix_path(self, path):
         """Ammend path so it's suitable for the webserver or jscofe/standalone"""
         if self.webserver_uri:
-            return urlparse.urljoin(self.webserver_uri, path[self._webserver_start :])
+            return urljoin(self.webserver_uri, path[self._webserver_start :])
         elif self.jscofe:
             return os.path.join("..", os.path.relpath(path, self.jsrview_dir))
         return path
