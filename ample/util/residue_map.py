@@ -2,8 +2,7 @@
 
 import types
 
-from ample.util import ample_util
-from ample.util import pdb_model
+from ample.util import ample_util, pdb_model
 
 
 class residueSequenceMap(object):

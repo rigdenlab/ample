@@ -12,8 +12,7 @@ import urlparse
 import uuid
 
 from ample import ensembler
-from ample.util import mrbump_util
-from ample.util import reference_manager
+from ample.util import mrbump_util, reference_manager
 
 try:
     import pyrvapi

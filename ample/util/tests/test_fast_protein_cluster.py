@@ -4,8 +4,7 @@ import shutil
 import unittest
 from ample import constants
 from ample.testing import test_funcs
-from ample.util import ample_util
-from ample.util import fast_protein_cluster
+from ample.util import ample_util, fast_protein_cluster
 
 
 @unittest.skip("fast_protein_cluster deprecated")

@@ -82,17 +82,6 @@ class CifParser(object):
         # Convert to mtz - this might add a spurious FREE column
         self._sfcif2mtz(cifPath, mtzPath)
 
-        # See if reflections have been set aside for Rfree or if we need to calculate
-        # if not self.hasRfree:
-        #     if self.reflnStatus:
-        #         # cif2mtz will have added a useless FREE column so we remove it
-        #         self.logger.info("sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
-        #         mtzPath = mtz_util.del_column(mtzPath, 'FREE')
-
-        #             # If there are no RFREE
-        #             self.logger.info( "sfcif2mtz: no RFree flags so running uniqueify")
-        #             mtzPath = mtz_util.addRfree(mtzPath)
-
         self.logger.info("sfcif2mtz: created mtz file: {0}".format(mtzPath))
         return mtzPath
 

@@ -1,7 +1,5 @@
 """Module containing a framework for unittesting of AMPLE modules"""
 
-from __future__ import print_function
-
 __author__ = "Felix Simkovic"
 __date__ = "22 Mar 2016"
 __version__ = "1.0"
@@ -18,6 +16,7 @@ from unittest import TestLoader, TextTestRunner, TestSuite
 # argparse module. Not needed otherwise
 PACKAGES = ["ensembler", "modelling", "parsers", "util"]
 
+logger = logging.getLogger(__name__)
 
 def add_cmd_options(parser):
     parser.add_argument(
@@ -63,5 +62,5 @@ class SuiteLoader(object):
                 suite.addTests(_suite)
                 del _suite
             except ImportError:
-                print ("*** not a package: {0} ***".format(path))
+                logger.debug("*** not a package: {0} ***".format(path))
         return suite

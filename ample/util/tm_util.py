@@ -16,18 +16,14 @@ import sys
 import tempfile
 import warnings
 
-from ample.parsers import alignment_parser
-from ample.parsers import tm_parser
-from ample.util import ample_util
-from ample.util import pdb_edit
+from ample.parsers import alignment_parser, tm_parser
+from ample.util import ample_util, pdb_edit
 
 from pyjob import Job
 from pyjob.misc import make_script
 
 try:
-    from Bio import PDB
-    from Bio import SeqIO
-
+    from Bio import PDB, SeqIO
     BIOPYTHON_AVAILABLE = True
 except ImportError:
     BIOPYTHON_AVAILABLE = False

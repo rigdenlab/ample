@@ -7,7 +7,11 @@ __date__ = "13 Jan 2016"
 __version__ = "0.1"
 
 import collections
+import logging
 import warnings
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 
 class PsipredSs2Parser(object):
@@ -72,13 +76,13 @@ class PsipredSs2Parser(object):
         E = len([i for i in self.residues if i.ss == "E"])
 
         if H > 0 and E > 0:
-            print ('Your protein is predicted to be mixed alpha beta, your chances of success are intermediate')
+            logging.info('Your protein is predicted to be mixed alpha beta, your chances of success are intermediate')
         if H == 0 and E > 0:
-            print ('Your protein is predicted to be all beta, your chances of success are low')
+            logging.info('Your protein is predicted to be all beta, your chances of success are low')
         if H > 0 and E == 0:
-            print ('Your protein is predicted to be all alpha, your chances of success are high')
+            logging.info('Your protein is predicted to be all alpha, your chances of success are high')
         if H == 0 and E == 0:
-            print ('Your protein is has no predicted secondary structure, your chances of success are low')
+            logging.info('Your protein is has no predicted secondary structure, your chances of success are low')
         return
 
     def checkContent(self):

@@ -1,7 +1,5 @@
 """Module containing a framework for integration testing of AMPLE modules"""
 
-from __future__ import print_function
-
 __author__ = "Jens Thomas, and Felix Simkovic"
 __date__ = "25 Mar 2016"
 __version__ = "1.0"
@@ -16,8 +14,7 @@ import sys
 
 from ample.constants import SHARE_DIR, AMPLE_PKL
 from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
-from ample.util import ample_util
-from ample.util import workers_util
+from ample.util import ample_util, workers_util
 
 ENSEMBLER = 'ensembler'
 MODELLING = 'modelling'
@@ -135,7 +132,7 @@ class AMPLEIntegrationFramework(object):
             clean_up = False
 
         if rosetta_dir and not os.path.isdir(rosetta_dir):
-            print ("Cannot find rosetta_dir: {0}".format(rosetta_dir))
+            logger.debug("Cannot find rosetta_dir: {0}".format(rosetta_dir))
             sys.exit(1)
 
         if clean_up:

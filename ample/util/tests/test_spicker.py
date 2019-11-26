@@ -6,8 +6,7 @@ import unittest
 
 from ample import constants
 from ample.testing import test_funcs
-from ample.util import ample_util
-from ample.util import spicker
+from ample.util import ample_util, spicker
 
 
 @unittest.skip("unreliable test cases")

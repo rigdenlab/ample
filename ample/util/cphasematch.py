@@ -8,9 +8,7 @@ import phaser
 import iotbx.pdb
 import iotbx.mtz
 
-from ample.util import ample_util
-from ample.util import mtz_util
-from ample.util import pdb_edit
+from ample.util import ample_util, mtz_util, pdb_edit
 
 logger = logging.getLogger(__name__)
 
@@ -381,5 +379,5 @@ if __name__ == "__main__":
             args.native_mtz, args.mr_mtz, f_label, sigf_label
         )
 
-    print ("Calculated phase error:", after_origin)
-    print ("Calculated origin shift:", origin_shift)
+    logging.info("Calculated phase error:", after_origin)
+    logging.info("Calculated origin shift:", origin_shift)

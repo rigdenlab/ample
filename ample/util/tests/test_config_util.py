@@ -5,8 +5,7 @@ import tempfile
 import unittest
 
 from ample import constants
-from ample.util import config_util
-from ample.util import version
+from ample.util import config_util, version
 from ample.ensembler.constants import SPICKER_RMSD, SPICKER_TM
 
 __author__ = "Adam Simpkin & Felix Simkovic"

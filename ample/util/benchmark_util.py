@@ -1,10 +1,9 @@
-'''
+"""
 Created on 24 Oct 2014
 
 @author: jmht
-'''
+"""
 
-# Python imports
 import copy
 import glob
 import logging
@@ -13,17 +12,7 @@ import pandas as pd
 import shutil
 import sys
 
-# Our imports
-from ample.util import ample_util
-from ample.util import csymmatch
-from ample.util import mtz_util
-from ample.util import pdb_edit
-from ample.util import pdb_model
-from ample.util import reforigin
-from ample.util import residue_map
-from ample.util import rio
-from ample.util import shelxe
-from ample.util import tm_util
+from ample.util import ample_util, csymmatch, mtz_util, pdb_edit, pdb_model, reforigin, residue_map, rio, shelxe, tm_util
 
 logger = logging.getLogger(__name__)
 
@@ -381,7 +370,6 @@ def analyseSolution(amoptd, d, mrinfo):
 
         # Move pdb onto new origin
         originPdb = ample_util.filename_append(mrPdb, astr='offset', directory=fixpath(amoptd['benchmark_dir']))
-        # print(mrPdb, originPdb, mrOrigin)
         pdb_edit.translate(mrPdb, originPdb, mrOrigin)
 
         # offset.pdb is the mrModel shifted onto the new origin use csymmatch to wrap onto native
@@ -560,19 +548,19 @@ def fixpath(path):
 
 # Run unit tests
 if __name__ == "__main__":
+    # Set up logging - could append to an existing log?
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
     # This runs the benchmarking starting from a pickled file containing an amopt dictionary.
     # - used when submitting the modelling jobs to a cluster
     if len(sys.argv) != 2 or not os.path.isfile(sys.argv[1]):
-        print ("benchmark script requires the path to a pickled amopt dictionary!")
+        logging.debug("benchmark script requires the path to a pickled amopt dictionary!")
         sys.exit(1)
 
     # Get the amopt dictionary
     amoptd = ample_util.read_amoptd(sys.argv[1])
 
-    # Set up logging - could append to an existing log?
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
     fl = logging.FileHandler(os.path.join(amoptd['work_dir'], "benchmark.log"))
     fl.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')

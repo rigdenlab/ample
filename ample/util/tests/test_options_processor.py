@@ -4,11 +4,8 @@ import unittest
 import random
 
 from ample.util.config_util import AMPLEConfigOptions
-from ample.util import argparse_util
-from ample.util import options_processor
-from ample.util.mrbump_util import REBUILD_MAX_PERMITTED_RESOLUTION
-from ample.util.mrbump_util import SHELXE_MAX_PERMITTED_RESOLUTION
-from ample.util.mrbump_util import SHELXE_MAX_PERMITTED_RESOLUTION_CC
+from ample.util import argparse_util, options_processor
+from ample.util.mrbump_util import REBUILD_MAX_PERMITTED_RESOLUTION, SHELXE_MAX_PERMITTED_RESOLUTION, SHELXE_MAX_PERMITTED_RESOLUTION_CC
 
 __author__ = "Jens Thomas"
 

@@ -9,9 +9,7 @@ import multiprocessing
 import os
 import time
 
-from ample.util import ample_util
-from ample.util import clusterize
-from ample.util import worker
+from ample.util import ample_util, clusterize, worker
 
 KILL_FILE = 'KILL_ME_NOW'
 logger = logging.getLogger()
@@ -77,7 +75,7 @@ class JobServer(object):
                         logger.critical("Process {0} failed with exitcode {1}".format(process, process.exitcode))
                         success = False
                     if process.exitcode == 0 and early_terminate:
-                        print (
+                        logger.info(
                             "Process {0} was successful so removing remaining jobs from inqueue".format(process.name)
                         )
                         self.empty_job_queue()

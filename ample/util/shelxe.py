@@ -10,8 +10,7 @@ import shutil
 import sys
 import uuid
 
-from ample.util import ample_util
-from ample.util import mtz_util
+from ample.util import ample_util, mtz_util
 
 
 try:
@@ -20,6 +19,8 @@ except ImportError:
     mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
     sys.path.insert(0, mrbumpd)
     import parse_shelxe
+
+logger = logging.getLogger(__name__)
 
 
 class MRinfo(object):
@@ -116,18 +117,17 @@ class MRinfo(object):
 
 
 if __name__ == "__main__":
-
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
-
     import argparse
-
     parser = argparse.ArgumentParser(description='Determine origin using SHELXE', prefix_chars="-")
+
     parser.add_argument('--native_mtz', help='Native MTZ', required=True)
     parser.add_argument('--native_pdb', help='Native PDB', required=True)
     parser.add_argument('--mr_pdb', help='Molecular Replacement MTZ', required=True)
     parser.add_argument('--executable', help="Path to SHELXE executable")
+
     args = parser.parse_args()
+
+    logging.basicConfig(level=logging.INFO)
 
     executable = None
     if args.executable:
@@ -150,5 +150,5 @@ if __name__ == "__main__":
     mrinfo.analyse(mr_pdb)
     os.unlink('shelxe-input.hkl')
     os.unlink('shelxe-input.ent')
-    print ("Origin shift is: {0}".format(mrinfo.originShift))
-    print ("Phase error is MPE: {0} | wMPE: {1}".format(mrinfo.originShift, mrinfo.MPE, mrinfo.wMPE))
+    logger.info("Origin shift is: {0}".format(mrinfo.originShift))
+    logger.info("Phase error is MPE: {0} | wMPE: {1}".format(mrinfo.originShift, mrinfo.MPE, mrinfo.wMPE))

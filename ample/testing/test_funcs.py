@@ -2,13 +2,12 @@ import argparse
 import sys
 
 if sys.version_info.major < 3:
-    from urllib2 import urlopen, HTTPError
+    from urllib2 import urlopen, URLError
 else:
     from urllib.error import URLError
     from urllib.request import urlopen
 
-from ample.testing import integration_util
-from ample.testing import run_tests
+from ample.testing import integration_util, run_tests
 from ample.util import ample_util
 
 __author__ = "Felix Simkovic and Jens Thomas"

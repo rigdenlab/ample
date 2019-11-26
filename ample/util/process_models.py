@@ -9,10 +9,7 @@ import zipfile
 
 import iotbx.pdb
 
-from ample.util import ample_util
-from ample.util import exit_util
-from ample.util import pdb_edit
-from ample.util import sequence_util
+from ample.util import ample_util, exit_util, pdb_edit, sequence_util
 
 logger = logging.getLogger(__name__)
 

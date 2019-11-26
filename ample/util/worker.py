@@ -1,16 +1,17 @@
 """Worker functions for job execution"""
 
-from __future__ import print_function
-
 __author__ = "Jens Thomas"
 __date__ = "28 Feb 2013"
 __version__ = "1.0"
 
+import logging
 import multiprocessing
 import os
 import sys
 
 from ample.util import ample_util
+
+logger = logging.getLogger(__name__)
 
 
 def worker(inqueue, early_terminate=False, check_success=None):
@@ -41,7 +42,7 @@ def worker(inqueue, early_terminate=False, check_success=None):
     success = True
     while True:
         if inqueue.empty():
-            print ("worker {0} got empty inqueue".format(multiprocessing.current_process().name))
+            logger.debug("worker {0} got empty inqueue".format(multiprocessing.current_process().name))
             rcode = 0 if success else 1
             sys.exit(rcode)
 
@@ -49,7 +50,7 @@ def worker(inqueue, early_terminate=False, check_success=None):
         job = inqueue.get()
 
         # Get name from script
-        print ("Worker {0} running job {1}".format(multiprocessing.current_process().name, job))
+        logger.debug("Worker {0} running job {1}".format(multiprocessing.current_process().name, job))
         directory, sname = os.path.split(job)
         jobname = os.path.splitext(sname)[0]
 
@@ -60,14 +61,12 @@ def worker(inqueue, early_terminate=False, check_success=None):
         # Can we use the retcode to check?
         # REM - is retcode object
         if retcode != 0:
-            print ("WARNING! Worker {0} got retcode {1}".format(multiprocessing.current_process().name, retcode))
+            logger.warning("WARNING! Worker {0} got retcode {1}".format(multiprocessing.current_process().name, retcode))
             success = False
 
         # Now check the result if early terminate
         if early_terminate:
             if check_success(job):
-                print ("Worker {0} job succeeded".format(multiprocessing.current_process().name))
+                logger.debug("Worker {0} job succeeded".format(multiprocessing.current_process().name))
                 sys.exit(0)
 
-    print ("worker {0} FAILED!".format(multiprocessing.current_process().name))
-    sys.exit(1)

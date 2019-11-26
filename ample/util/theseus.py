@@ -8,8 +8,7 @@ import logging
 import os
 import shutil
 
-from ample.util import ample_util
-from ample.util import sequence_util
+from ample.util import ample_util, sequence_util
 
 # We create this here otherwise it causes problems with pickling
 TheseusVariances = collections.namedtuple(

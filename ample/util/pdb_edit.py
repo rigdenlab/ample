@@ -13,10 +13,7 @@ import unittest
 import iotbx.file_reader
 import iotbx.pdb
 
-from ample.util import ample_util
-from ample.util import pdb_model
-from ample.util import residue_map
-from ample.util import sequence_util
+from ample.util import ample_util, pdb_model, residue_map, sequence_util
 
 logger = logging.getLogger(__name__)
 
@@ -1296,13 +1293,7 @@ def _xyz_atom_coords(atom_group):
 
 
 if __name__ == "__main__":
-    # unittest.TextTestRunner(verbosity=2).run(testSuite())
-    #
-    # Command-line handling
-    #
-    # unittest.TextTestRunner(verbosity=2).run(testSuite())
     import argparse
-
     parser = argparse.ArgumentParser(description='Manipulate PDB files', prefix_chars="-")
 
     group = parser.add_mutually_exclusive_group()
@@ -1318,8 +1309,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    logging.basicConfig(level=logging.DEBUG)
+
     if args.test:
-        print (unittest.TestLoader().loadTestsFromModule(sys.modules[__name__]))
+        logging.debug(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__]))
         sys.exit(unittest.TextTestRunner().run(unittest.TestLoader().loadTestsFromModule(sys.modules[__name__])))
 
     # Get full paths to all files
@@ -1338,10 +1331,10 @@ if __name__ == "__main__":
     elif args.std:
         standardise(args.input_file, args.output_file, del_hetatm=True, chain=args.chain)
     elif args.seq:
-        print(sequence_util.Sequence(pdb=args.input_file).fasta_str())
+        logging.debug(sequence_util.Sequence(pdb=args.input_file).fasta_str())
     elif args.split_models:
-        print(split_pdb(args.input_file))
+        logging.debug(split_pdb(args.input_file))
     elif args.split_chains:
-        print(split_into_chains(args.input_file, chain=args.chain))
+        logging.debug(split_into_chains(args.input_file, chain=args.chain))
     elif args.chain:
-        print(extract_chain(args.input_file, args.output_file, chainID=args.chain))
+        logging.debug(extract_chain(args.input_file, args.output_file, chainID=args.chain))

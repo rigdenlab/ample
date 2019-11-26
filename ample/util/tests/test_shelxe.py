@@ -3,8 +3,7 @@
 import os
 import unittest
 from ample import constants
-from ample.util import ample_util
-from ample.util import shelxe
+from ample.util import ample_util, shelxe
 from ample.testing import test_funcs
 
 

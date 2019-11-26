@@ -5,8 +5,7 @@ import os
 
 import iotbx.pdb
 
-from ample.util import ample_util
-from ample.util import exit_util
+from ample.util import ample_util, exit_util
 
 
 def sequence(pdbin):

@@ -11,9 +11,7 @@ import uuid
 
 from iotbx import reflection_file_reader
 
-from ample.util import ample_util
-from ample.util import cif_parser
-from ample.util import exit_util
+from ample.util import ample_util, cif_parser, exit_util
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -117,7 +115,7 @@ def _get_rfree(content):
 def max_min_resolution(file_name):
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
     if not reflection_file.file_type() == "ccp4_mtz":
-        print ("File is not of type ccp4_mtz: {0}".format(file_name))
+        logger.warning("File is not of type ccp4_mtz: {0}".format(file_name))
         sys.exit(1)
     return reflection_file.file_content().max_min_resolution()
 
