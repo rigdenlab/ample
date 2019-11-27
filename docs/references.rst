@@ -102,12 +102,16 @@ Reference List
 
      - .. cssclass:: btn btn-primary btn-sm btn-reference
 
-          `BibTex <_static/thomas2017.bib>
+          `BibTex <_static/thomas2017.bib>`_
 
-  * - Simpkin AJ, Thomase JMH, Simkovic F, Keegan RM, Rigden DJ (2019). Molecular Replacement using structure predictions from databases  *Acta Cryst. D* **75**.
+   * - Simpkin AJ, Thomase JMH, Simkovic F, Keegan RM, Rigden DJ (2019). Molecular Replacement using structure predictions from databases. *Acta Cryst. D* **75**.
      - .. cssclass:: btn btn-primary btn-sm btn-reference
-          
+
           `CrossRef <https://doi.org/10.1107/S2059798319013962>`_
+
+     - .. cssclass:: btn btn-default btn-sm btn-reference
+
+          `PubMed <https://www.ncbi.nlm.nih.gov/pubmed>`_
 
      - .. cssclass:: btn btn-primary btn-sm btn-reference
 
