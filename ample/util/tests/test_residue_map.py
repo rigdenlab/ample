@@ -3,8 +3,7 @@
 import os
 import unittest
 from ample import constants
-from ample.util import pdb_edit
-from ample.util import residue_map
+from ample.util import pdb_edit, residue_map
 
 
 class Test(unittest.TestCase):

@@ -13,16 +13,8 @@ if __name__ == "__main__":
     root = os.sep.join(os.path.abspath(__file__).split(os.sep)[:-2])
     sys.path.insert(0, os.path.join(root, "scripts"))
 
-from ample.util import ample_util
-from ample.util import mrbump_cmd
-from ample.util import printTable
-
-# FS [15/11/2018] -> New MRBUMP structure allows direct imports, wait for release then replace
-mrbumpd = os.path.join(os.environ['CCP4'], "share", "mrbump", "include", "parsers")
-sys.path.insert(0, mrbumpd)
-import parse_arpwarp
-import parse_buccaneer
-import parse_phaser
+from ample.util import ample_util, mrbump_cmd, printTable
+from mrbump.parsers import parse_arpwarp, parse_buccaneer, parse_phaser
 
 TOP_KEEP = 3  # How many of the top shelxe/phaser results to keep for the gui
 MRBUMP_RUNTIME = 172800  # allow 48 hours for each mrbump job
@@ -717,13 +709,12 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
+
     if len(sys.argv) >= 2:
         mrbump_dir = os.path.join(os.getcwd(), sys.argv[1])
     else:
         mrbump_dir = os.getcwd()
 
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
-
     r = ResultsSummary()
-    print (r.summariseResults(mrbump_dir, max_loglevel=logging.DEBUG))
+    logging.info(r.summariseResults(mrbump_dir, max_loglevel=logging.DEBUG))

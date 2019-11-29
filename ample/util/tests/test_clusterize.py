@@ -1,8 +1,7 @@
 import os
 import unittest
 
-from ample.util import ample_util
-from ample.util import clusterize
+from ample.util import ample_util, clusterize
 
 
 def on_cluster():

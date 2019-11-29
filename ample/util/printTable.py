@@ -56,4 +56,3 @@ if __name__ == "__main__":
     table = T.maketable()
     out = sys.stdout
     T.pprint_table(out, table)
-    print ('done')

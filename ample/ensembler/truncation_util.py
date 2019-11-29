@@ -10,9 +10,7 @@ import os
 import sys
 
 from ample.ensembler._ensembler import model_core_from_fasta
-from ample.util import ample_util
-from ample.util import pdb_edit
-from ample.util import theseus
+from ample.util import ample_util, pdb_edit, theseus
 
 logger = logging.getLogger(__name__)
 

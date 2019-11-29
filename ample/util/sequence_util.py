@@ -1,9 +1,59 @@
 #!/usr/bin/env ccp4-python
+from collections import OrderedDict
 import logging
 import os
 
-import exit_util
-import pdb_edit
+import iotbx.pdb
+
+from ample.util import ample_util, exit_util
+
+
+def sequence(pdbin):
+    return _sequence(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
+
+
+def _sequence(hierarchy):
+    """Extract the sequence of residues from a pdb file."""
+    chain2data = _sequence_data(hierarchy)
+    return dict((k, chain2data[k][0]) for k in chain2data.keys())
+
+
+def _sequence1(hierarchy):
+    """Return sequence of the first chain"""
+    d = _sequence(hierarchy)
+    return d[sorted(d.keys())[0]]
+
+
+def sequence_data(pdbin):
+    return _sequence_data(iotbx.pdb.pdb_input(pdbin).construct_hierarchy())
+
+
+def _sequence_data(hierarchy):
+    """Extract the sequence of residues and resseqs from a pdb file."""
+    chain2data = OrderedDict()
+    for chain in hierarchy.models()[0].chains():  # only the first model
+        if not chain.is_protein():
+            continue
+        seq, resseq = chain_data(chain)
+        chain2data[chain.id] = (seq, resseq)
+    return chain2data
+
+
+def chain_data(chain):
+    seq = ""
+    resseq = []
+    for residue in chain.conformers()[0].residues():  # Just look at the first conformer
+        # See if any of the atoms are non-hetero - if so we add this residue
+        if any([not atom.hetero for atom in residue.atoms()]):
+            seq += ample_util.three2one[residue.resname]
+            resseq.append(residue.resseq_as_int())
+    return seq, resseq
+
+
+def chain_sequence(chain):
+    if not chain.is_protein():
+        return None
+    return chain_data(chain)[0]
 
 
 class Sequence(object):
@@ -52,7 +102,7 @@ class Sequence(object):
 
         if not got:
             raise RuntimeError("Could not find matching pdb name for {0} in headers {1}".format(fname, self.headers))
-        seqd = pdb_edit.sequence_data(pdbin)
+        seqd = sequence_data(pdbin)
         if len(seqd) > 1:
             raise RuntimeError("Currently only support adding data for single chain pdbs")
 
@@ -109,7 +159,7 @@ class Sequence(object):
     def from_pdb(self, pdbin):
         pdbin_name = os.path.basename(pdbin)
         self.name = os.path.splitext(pdbin_name)[0]
-        chain2data = pdb_edit.sequence_data(pdbin)
+        chain2data = sequence_data(pdbin)
         if len(chain2data) < 1:
             raise RuntimeError("Could not read sequence from pdb: {0}".format(pdbin))
         self.headers = []

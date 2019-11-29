@@ -1,8 +1,8 @@
-'''
+"""
 Created on 28 Feb 2013
 
 @author: jmht
-'''
+"""
 import os
 import sys
 

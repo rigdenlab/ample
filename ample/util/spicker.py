@@ -336,6 +336,8 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--threads', default=1, type=int, help="Threads")
     args = parser.parse_args()
 
+    logging.basicConfig(level=logging.DEBUG)
+
     models = args.models
     if not os.path.exists(models):
         raise RuntimeError("Cannot find models: {0}".format(models))
@@ -347,14 +349,11 @@ if __name__ == "__main__":
             models = [l.strip() for l in f.readlines() if l.strip()]
 
     if len(models) < 1:
-        print ("Cannot find any pdbs in: {0}".format(models))
+        logger.debug("Cannot find any pdbs in: {0}".format(models))
         sys.exit(1)
 
     spicker_exe = os.path.abspath(args.executable) if args.executable else None
 
-    logging.basicConfig()
-    logging.getLogger().setLevel(logging.DEBUG)
-
     spicker = Spickerer(spicker_exe=spicker_exe)
     spicker.cluster(models, score_type=args.score_type, nproc=args.threads)
-    print (spicker.results_summary())
+    logger.info(spicker.results_summary())

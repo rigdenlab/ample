@@ -14,8 +14,7 @@ import tempfile
 import warnings
 import zipfile
 
-from ample.util import ccp4
-from ample.util import exit_util
+from ample.util import ccp4, exit_util
 
 from ample.constants import SHARE_DIR, AMPLEDIR, I2DIR
 
@@ -33,6 +32,33 @@ class FileNotFoundError(Exception):
 # and we need to a Null handler
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+three2one = {
+    'ALA': 'A',
+    'ARG': 'R',
+    'ASN': 'N',
+    'ASP': 'D',
+    'CYS': 'C',
+    'GLU': 'E',
+    'GLN': 'Q',
+    'GLY': 'G',
+    'HIS': 'H',
+    'ILE': 'I',
+    'LEU': 'L',
+    'LYS': 'K',
+    'MET': 'M',
+    'PHE': 'F',
+    'PRO': 'P',
+    'SER': 'S',
+    'THR': 'T',
+    'TRP': 'W',
+    'TYR': 'Y',
+    'VAL': 'V',
+    'UNK': 'X',
+}
+# http://stackoverflow.com/questions/3318625/efficient-bidirectional-hash-table-in-python
+# aaDict.update( dict((v, k) for (k, v) in aaDict.items()) )
+one2three = dict((v, k) for (k, v) in three2one.items())
 
 
 def amoptd_fix_path(optd, newroot):

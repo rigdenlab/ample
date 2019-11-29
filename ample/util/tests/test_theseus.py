@@ -6,9 +6,7 @@ import tempfile
 import unittest
 
 from ample import constants
-from ample.util import ample_util
-from ample.util import pdb_edit
-from ample.util import theseus
+from ample.util import ample_util, pdb_edit, theseus
 from ample.testing import test_funcs
 
 

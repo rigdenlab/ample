@@ -3,10 +3,9 @@
 import os
 import uuid
 
-from ample.util import ample_util
-from ample.util import pdb_edit
+from ample.util import ample_util, pdb_edit
 
-# Our imports
+
 class Csymmatch(object):
     def __init__(self):
         self._reset()

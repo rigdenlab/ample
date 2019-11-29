@@ -11,9 +11,7 @@ import uuid
 
 from iotbx import reflection_file_reader
 
-import ample_util  # Avoid circular dependencies
-import exit_util
-import cif_parser  # Avoid circular dependencies
+from ample.util import ample_util, cif_parser, exit_util
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -117,7 +115,7 @@ def _get_rfree(content):
 def max_min_resolution(file_name):
     reflection_file = reflection_file_reader.any_reflection_file(file_name=file_name)
     if not reflection_file.file_type() == "ccp4_mtz":
-        print ("File is not of type ccp4_mtz: {0}".format(file_name))
+        logger.warning("File is not of type ccp4_mtz: {0}".format(file_name))
         sys.exit(1)
     return reflection_file.file_content().max_min_resolution()
 
@@ -167,7 +165,11 @@ def processReflectionFile(amoptd):
             exit_util.exit_error(msg)
 
         cp = cif_parser.CifParser()
-        amoptd['mtz'] = cp.sfcif2mtz(amoptd['sf_cif'])
+        # See if reflections have been set aside for Rfree or if we need to calculate
+        if cp.hasRfree and cp.reflnStatus:
+            logger.info("sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
+            mtz = cp.sfcif2mtz(amoptd['sf_cif'])
+            amoptd['mtz'] = del_column(mtz, 'FREE')
 
     # Now have an mtz so check it's valid
     if not amoptd['mtz'] or not os.path.isfile(amoptd['mtz']):

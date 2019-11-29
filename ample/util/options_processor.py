@@ -21,12 +21,7 @@ from ample.ensembler.constants import (
     ALLATOM,
 )
 from ample.modelling import rosetta_model
-from ample.util import ample_util
-from ample.util import contact_util
-from ample.util import exit_util
-from ample.util import mrbump_util
-from ample.util import mtz_util
-from ample.util import sequence_util
+from ample.util import ample_util, contact_util, exit_util, mrbump_util, mtz_util, sequence_util
 
 logger = logging.getLogger(__name__)
 

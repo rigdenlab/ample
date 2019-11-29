@@ -1,8 +1,8 @@
-'''
+"""
 Created on 5 Mar 2014
 
 @author: jmht
-'''
+"""
 
 import os
 import shutil
@@ -73,14 +73,3 @@ def ccmtzOrigin(nativeMap, mrPdb):
         os.unlink(tempnam)
 
     return origin
-
-
-if __name__ == '__main__':
-
-    os.chdir("/home/jmht/Documents/work/CC/phenix_get_cc_mtz_pdb/foo")
-    mtz = "3T97-cad.mtz"
-    native = "3T97_std.pdb"
-    mrPdb = "phaser_loc0_ALL_poly_ala_trunc_2.733913_rad_1_UNMOD.1.pdb"
-    mtzMap = generateMap(mtz, native)
-
-    print (ccmtzOrigin(mtzMap, mrPdb))

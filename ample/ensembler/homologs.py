@@ -12,8 +12,7 @@ import sys
 from ample.ensembler import _ensembler
 from ample.ensembler import truncation_util
 from ample.ensembler.constants import SIDE_CHAIN_TREATMENTS
-from ample.util import ample_util
-from ample.util import pdb_edit
+from ample.util import ample_util, pdb_edit, sequence_util
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +62,7 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
     # Need to map chain name to pdb
     model2chain = {}
     for m in models:
-        seqd = pdb_edit.sequence(m)
+        seqd = sequence_util.sequence(m)
         if len(seqd) != 1:
             msg = "Model {0} does not contain a single chain, got: {1}".format(*seqd.keys())
             raise RuntimeError(msg)

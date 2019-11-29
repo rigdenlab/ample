@@ -1,17 +1,12 @@
-'''
-Useful manipulations on PDB files
-'''
+"""Useful manipulations on PDB files"""
 
 import types
 
-import pdb_edit
-import pdb_model
+from ample.util import ample_util, pdb_model
 
 
 class residueSequenceMap(object):
-    """Class for handling mapping between model and native residue indices.
-    
-     """
+    """Class for handling mapping between model and native residue indices."""
 
     def __init__(self, refPdb=None, targetPdb=None):
 
@@ -380,7 +375,7 @@ class residueSequenceMap(object):
 
         sequence = ""
         for n in resName:
-            sequence += pdb_edit.three2one[n]
+            sequence += ample_util.three2one[n]
 
         cAlphaMask = ['CA' not in atomTypes for atomTypes in atomTypesList]
         return sequence, resSeq, cAlphaMask

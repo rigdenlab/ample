@@ -1,10 +1,10 @@
-'''
+"""
 Created on 7 Aug 2013
 
 @author: jmht
 
 Classes for holding data from PDB files
-'''
+"""
 
 import copy
 import os

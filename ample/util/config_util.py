@@ -1,8 +1,8 @@
-'''
+"""
 30.01.2016
 
 @author: hlfsimko
-'''
+"""
 import logging
 import multiprocessing
 import os

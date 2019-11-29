@@ -11,10 +11,7 @@ import re
 import shutil
 
 from ample.ensembler.constants import ENSEMBLE_MAX_MODELS, ALLATOM, POLYALA, RELIABLE, UNMODIFIED
-from ample.util import ample_util
-from ample.util import pdb_edit
-from ample.util import sequence_util
-from ample.util import theseus
+from ample.util import ample_util, pdb_edit, sequence_util, theseus
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +41,7 @@ def model_core_from_fasta(models, alignment_file, work_dir=None, case_sensitive=
     GAP = '-'
     # Can't use below as Theseus ignores lower-case letters in the alignment
     if case_sensitive:
-        core = [all([x in pdb_edit.one2three.keys() for x in t]) for t in zip(*align_seq.sequences)]
+        core = [all([x in ample_util.one2three.keys() for x in t]) for t in zip(*align_seq.sequences)]
     else:
         core = [all([x != GAP for x in t]) for t in zip(*align_seq.sequences)]
 

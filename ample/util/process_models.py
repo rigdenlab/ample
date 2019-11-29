@@ -9,9 +9,7 @@ import zipfile
 
 import iotbx.pdb
 
-from ample.util import ample_util
-from ample.util import pdb_edit
-from ample.util import exit_util
+from ample.util import ample_util, exit_util, pdb_edit, sequence_util
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +176,7 @@ def check_models(pdb_structures, results):
                 return results
             logger.debug("Found a single PDB with multiple models - assuming an NMR ensemble")
             results.ensemble = True
-            results.sequence = pdb_edit.chain_sequence(hierarchy.models()[0].only_chain())
+            results.sequence = sequence_util.chain_sequence(hierarchy.models()[0].only_chain())
         else:
             logger.info("check_models found a single pdb with a single model")
             if not len(hierarchy.only_model().chains()) == 1:
@@ -208,7 +206,7 @@ def check_models(pdb_structures, results):
                 h.append_model((h.models()[0].detached_copy()))
                 updated = True
             hierarchies.append(h)
-            seq_data = pdb_edit._sequence_data(h)
+            seq_data = sequence_util._sequence_data(h)
             if ref_data is None:
                 # Get sequence data for first pdb
                 ref_data = seq_data
@@ -241,7 +239,7 @@ def check_models(pdb_structures, results):
                 results.homologs = True
             else:
                 # All have the same sequence
-                results.sequence = pdb_edit.chain_sequence(hierarchies[0].only_model().only_chain())
+                results.sequence = sequence_util.chain_sequence(hierarchies[0].only_model().only_chain())
         # We now have multiple structures, each with one chain - make sure they all have a chain.id
         chains_updated = pdb_edit.add_missing_single_chain_ids(hierarchies)
         if chains_updated:
@@ -289,7 +287,7 @@ def single_chain_models_with_same_sequence(hierarchy):
             chain = model.only_chain()
         except AssertionError:
             return False
-        seq = pdb_edit.chain_sequence(chain)
+        seq = sequence_util.chain_sequence(chain)
         if root_seq is None:
             root_seq = seq
             continue

@@ -1,9 +1,7 @@
 import logging
 import os
 
-from ample.util import ample_util
-from ample.util import pdb_edit
-from ample.util import residue_map
+from ample.util import ample_util, pdb_edit, residue_map
 
 logger = logging.getLogger(__name__)
 
