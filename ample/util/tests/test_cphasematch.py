@@ -1,6 +1,7 @@
 """Test functions for cphasematch"""
 
 import os
+import sys
 import unittest
 from ample import constants
 from ample.util import cphasematch
@@ -67,6 +68,7 @@ class Test(unittest.TestCase):
         self.assertEqual([0.0, 0.0, 0.5], origin_shift)
         return
 
+    @unittest.skipIf(sys.platform.startswith("win"), "requires Linux")
     def test_cphasematch_mtz(self):
         os.chdir(self.thisd)  # Need as otherwise tests that happen in other directories change os.cwd()
         native_mtz_phased = os.path.join(self.testfiles_dir, "toxd_59.1.mtz")

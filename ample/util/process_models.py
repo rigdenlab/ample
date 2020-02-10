@@ -4,6 +4,7 @@ import glob
 import logging
 import os
 import shutil
+import sys
 import tarfile
 import zipfile
 
@@ -142,7 +143,9 @@ def check_models_dir(models_in_dir, models_out_dir):
     """Examine a directory of PDB files to determine their suitability for running with AMPLE."""
     assert os.path.isdir(models_in_dir)
     pdb_structures = glob.glob(os.path.join(models_in_dir, "*.pdb"))
-    pdb_structures += glob.glob(os.path.join(models_in_dir, "*.PDB"))
+    # glob.glob in Windows is not case sensitive
+    if not sys.platform.startswith("win"):
+        pdb_structures += glob.glob(os.path.join(models_in_dir, "*.PDB"))
     results = CheckModelsResult()
     results.models_dir = models_out_dir
 
