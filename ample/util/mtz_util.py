@@ -165,11 +165,13 @@ def processReflectionFile(amoptd):
             exit_util.exit_error(msg)
 
         cp = cif_parser.CifParser()
+        mtz = cp.sfcif2mtz(amoptd['sf_cif'])
         # See if reflections have been set aside for Rfree or if we need to calculate
-        if cp.hasRfree and cp.reflnStatus:
+        if cp.hasRfree:
             logger.info("sfcif2mtz: no valid RFREE data so removing FREE column added by mtz2cif")
-            mtz = cp.sfcif2mtz(amoptd['sf_cif'])
             amoptd['mtz'] = del_column(mtz, 'FREE')
+        else:
+            amoptd['mtz'] = mtz
 
     # Now have an mtz so check it's valid
     if not amoptd['mtz'] or not os.path.isfile(amoptd['mtz']):
