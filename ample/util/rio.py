@@ -455,14 +455,14 @@ class Rio(object):
             aa1 = c[11:14]
             # Will get key error for all-atom if there is solvent etc.
             try:
-                d['aa1'] = pdb_edit.three2one[aa1]  # get amino acid and convert to single letter code
+                d['aa1'] = ample_util.three2one[aa1]  # get amino acid and convert to single letter code
             except KeyError:
                 d['aa1'] = 'X'
             d['chainId2'] = c[32]
             d['resSeq2'] = int(c[34:38].strip())
             aa2 = c[39:42]
             try:
-                d['aa2'] = pdb_edit.three2one[aa2]
+                d['aa2'] = ample_util.three2one[aa2]
             except KeyError:
                 d['aa2'] = 'X'
             d['dist'] = float(c[56:62].strip())
