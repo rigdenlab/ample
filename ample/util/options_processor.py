@@ -258,7 +258,7 @@ def process_modelling_options(optd):
         optd['models'] = optd['cluster_dir']
         optd['make_frags'] = False
         optd['make_models'] = False
-    elif optd['ideal_helices']:
+    elif optd['ideal_helices'] or optd['helical_ensembles']:
         optd['make_frags'] = False
         optd['make_models'] = False
     elif optd['homologs']:

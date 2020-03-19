@@ -266,13 +266,16 @@ def filename_append(filename=None, astr=None, directory=None, separator="_"):
     return os.path.join(directory, name)
 
 
-def ideal_helices(optd):
+def ideal_helices(optd, ensembles=False):
     """Get some ideal helices
 
     Parameters
     ----------
     nresidues : int
        Number of residues to be used
+
+    ensembles : bool
+       If True then helical ensembles will be used instead of polyalanine ideal helices
 
     Returns
     -------
@@ -282,14 +285,50 @@ def ideal_helices(optd):
     """
     nresidues = optd['fasta_length']
     include_dir = os.path.join(SHARE_DIR, 'include')
-    names = ['polyala_5', 'polyala_10', 'polyala_15', 'polyala_20', 'polyala_25', 'polyala_30', 'polyala_35',
-             'polyala_40']
-    polya_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
+    if not ensembles:
+        names = ['polyala_5', 'polyala_10', 'polyala_15', 'polyala_20', 'polyala_25', 'polyala_30', 'polyala_35',
+                 'polyala_40']
+    else:
+        names = ['ensemble_20_gradientbfact_homogenous.pdb', 'ensemble_20_gradientbfact_heterogenous.pdb',
+                 'ensemble_20_nativebfact_heterogenous.pdb', 'ensemble_20_nativebfact_homogenous.pdb',
+                 'ensemble_20_rmsd_perpositionbfact_heterogenous.pdb', 'ensemble_20_rmsd_permodelbfact_homogenous.pdb',
+                 'ensemble_20_rmsd_permodelbfact_heterogenous.pdb', 'ensemble_20_rmsd_perpositionbfact_homogenous.pdb',
+                 'ensemble_15_gradientbfact_heterogenous.pdb', 'ensemble_15_gradientbfact_homogenous.pdb',
+                 'ensemble_15_nativebfact_heterogenous.pdb', 'ensemble_15_nativebfact_homogenous.pdb',
+                 'ensemble_15_rmsd_perpositionbfact_heterogenous.pdb',
+                 'ensemble_15_rmsd_permodelbfact_heterogenous.pdb', 'ensemble_15_rmsd_perpositionbfact_homogenous.pdb',
+                 'ensemble_15_rmsd_permodelbfact_homogenous.pdb', 'ensemble_25_gradientbfact_homogenous.pdb',
+                 'ensemble_25_gradientbfact_heterogenous.pdb', 'ensemble_25_nativebfact_heterogenous.pdb',
+                 'ensemble_25_nativebfact_homogenous.pdb', 'ensemble_25_rmsd_perpositionbfact_homogenous.pdb',
+                 'ensemble_25_rmsd_permodelbfact_homogenous.pdb', 'ensemble_25_rmsd_perpositionbfact_heterogenous.pdb',
+                 'ensemble_25_rmsd_permodelbfact_heterogenous.pdb', 'ensemble_30_gradientbfact_homogenous.pdb',
+                 'ensemble_30_gradientbfact_heterogenous.pdb', 'ensemble_30_nativebfact_heterogenous.pdb',
+                 'ensemble_30_nativebfact_homogenous.pdb', 'ensemble_30_rmsd_perpositionbfact_homogenous.pdb',
+                 'ensemble_30_rmsd_perpositionbfact_heterogenous.pdb',
+                 'ensemble_30_rmsd_permodelbfact_heterogenous.pdb', 'ensemble_30_rmsd_permodelbfact_homogenous.pdb',
+                 'ensemble_35_gradientbfact_homogenous.pdb', 'ensemble_35_gradientbfact_heterogenous.pdb',
+                 'ensemble_35_nativebfact_heterogenous.pdb', 'ensemble_35_nativebfact_homogenous.pdb',
+                 'ensemble_35_rmsd_perpositionbfact_heterogenous.pdb',
+                 'ensemble_35_rmsd_perpositionbfact_homogenous.pdb', 'ensemble_35_rmsd_permodelbfact_homogenous.pdb',
+                 'ensemble_35_rmsd_permodelbfact_heterogenous.pdb', 'ensemble_40_gradientbfact_homogenous.pdb',
+                 'ensemble_40_gradientbfact_heterogenous.pdb', 'ensemble_40_nativebfact_heterogenous.pdb',
+                 'ensemble_40_nativebfact_homogenous.pdb', 'ensemble_40_rmsd_perpositionbfact_heterogenous.pdb',
+                 'ensemble_40_rmsd_permodelbfact_heterogenous.pdb', 'ensemble_40_rmsd_perpositionbfact_homogenous.pdb',
+                 'ensemble_40_rmsd_permodelbfact_homogenous.pdb', 'ensemble_10_gradientbfact_heterogenous.pdb',
+                 'ensemble_10_gradientbfact_homogenous.pdb', 'ensemble_10_nativebfact_heterogenous.pdb',
+                 'ensemble_10_nativebfact_homogenous.pdb', 'ensemble_10_rmsd_permodelbfact_homogenous.pdb',
+                 'ensemble_10_rmsd_perpositionbfact_homogenous.pdb', 'ensemble_10_rmsd_permodelbfact_heterogenous.pdb',
+                 'ensemble_10_rmsd_perpositionbfact_heterogenous.pdb', 'ensemble_5_gradientbfact_heterogenous.pdb',
+                 'ensemble_5_gradientbfact_homogenous.pdb', 'ensemble_5_nativebfact_heterogenous.pdb',
+                 'ensemble_5_nativebfact_homogenous.pdb', 'ensemble_5_rmsd_perpositionbfact_homogenous.pdb',
+                 'ensemble_5_rmsd_permodelbfact_heterogenous.pdb', 'ensemble_5_rmsd_permodelbfact_homogenous.pdb',
+                 'ensemble_5_rmsd_perpositionbfact_heterogenous.pdb']
 
     ensemble_options = {}
     ensembles_data = []
     pdbs = []
-    for name, nres in zip(names, polya_lengths):
+    for name in names:
+        nres = int(name.split('_')[1])
         ncopies = nresidues / nres
         if ncopies < 1:
             ncopies = 1

@@ -153,6 +153,14 @@ def add_general_options(parser=None):
         help='Use ideal polyalanine helices to solve structure (8 helices: from 5-40 residues)',
     )
     parser.add_argument(
+        '-helical_ensembles',
+        action=BoolAction,
+        nargs='?',
+        metavar='True/False',
+        help='Use helical ensembles to solve structure (64 ensembles)',
+    )
+
+    parser.add_argument(
         '-improve_template', metavar='improve_template', help='Path to a template to improve - NMR, homolog'
     )
     parser.add_argument('-LGA', metavar='path_to_LGA dir', help=argparse.SUPPRESS)

@@ -555,7 +555,7 @@ def finalSummary(amoptd):
         return "Could not find any MRBUMP results in directory: {0}!".format(amoptd['mrbump_dir'])
 
     if 'ensembles_data' in amoptd and not (
-        amoptd['ideal_helices'] or amoptd['homologs'] or amoptd['single_model_mode']
+        amoptd['ideal_helices'] or amoptd['helical_ensembles'] or amoptd['homologs'] or amoptd['single_model_mode']
     ):
         results = []
         # Merge dictionaries together

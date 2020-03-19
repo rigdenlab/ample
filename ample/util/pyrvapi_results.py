@@ -470,7 +470,8 @@ class AmpleOutput(object):
 
     def do_create_ensembles_section(self, ample_dict):
         return (
-            not (ample_dict.get('single_model_mode') or ample_dict.get('homologs') or ample_dict.get('ideal_helices'))
+            not (ample_dict.get('single_model_mode') or ample_dict.get('homologs') or
+                 ample_dict.get('ideal_helices') or ample_dict.get('helical_ensembles'))
             and bool(ample_dict.get('ensembles_data'))
             and not self.summary_tab_ensemble_sec_id
         )

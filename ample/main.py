@@ -243,6 +243,9 @@ class Ample(object):
             ample_util.ideal_helices(optd)
             logger.info("*** Using ideal helices to solve structure ***")
             logger.warning('Ideal helices may not solve the structure, consider using -helical_ensembles instead!')
+        elif optd['helical_ensembles']:
+            ample_util.ideal_helices(optd, ensembles=True)
+            logger.info("*** Using helical ensembles to solve structure ***")
         else:
             # Check we have some models to work with
             if not (optd['single_model_mode'] or optd['processed_models']):
@@ -416,8 +419,8 @@ class Ample(object):
 
         if not ok:
             msg = (
-                "An error code was returned after running MRBUMP on the ensembles!\n"
-                + "For further information check the logs in directory: {0}".format(optd['mrbump_dir'])
+                    "An error code was returned after running MRBUMP on the ensembles!\n"
+                    + "For further information check the logs in directory: {0}".format(optd['mrbump_dir'])
             )
             logger.critical(msg)
 

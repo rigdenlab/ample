@@ -79,7 +79,7 @@ class ReferenceManager:
                 self.section_labels[section] = ['AMPLE', 'CCP4', 'AMPLE_COILED-COILS', 'AMPLE_CONTACTS']
             elif section == self.SECTIONS.MODELLING:
                 labels = []
-                if optd.get('ideal_helices'):
+                if optd.get('ideal_helices') or optd.get('helical_ensembles'):
                     labels.append('AMPLE_COILED-COILS')
                 if optd.get('make_models'):
                     labels.append('ROSETTA')
