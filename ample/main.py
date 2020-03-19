@@ -242,6 +242,7 @@ class Ample(object):
         elif optd['ideal_helices']:
             ample_util.ideal_helices(optd)
             logger.info("*** Using ideal helices to solve structure ***")
+            logger.warning('Ideal helices may not solve the structure, consider using -helical_ensembles instead!')
         else:
             # Check we have some models to work with
             if not (optd['single_model_mode'] or optd['processed_models']):

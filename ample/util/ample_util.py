@@ -282,7 +282,8 @@ def ideal_helices(optd):
     """
     nresidues = optd['fasta_length']
     include_dir = os.path.join(SHARE_DIR, 'include')
-    names = ['polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25', 'polyala30', 'polyala35', 'polyala40']
+    names = ['polyala_5', 'polyala_10', 'polyala_15', 'polyala_20', 'polyala_25', 'polyala_30', 'polyala_35',
+             'polyala_40']
     polya_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
 
     ensemble_options = {}
