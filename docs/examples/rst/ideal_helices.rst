@@ -50,6 +50,10 @@ Finally we provide some options about how AMPLE will run:
 
 For a full list possible options see :ref:`AMPLE options <cl_options>`.
 
+.. note::
+   If ideal helices do not solve the structure, you may want to use ``-helical_ensembles`` in place of ``-ideal_helices``. AMPLE will then use a new set of helical ensembles which has been very successful on solving challenging cases!
+
+
 ------------------------------------------------------------------
 
 AMPLE Output

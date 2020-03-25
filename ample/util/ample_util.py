@@ -266,13 +266,16 @@ def filename_append(filename=None, astr=None, directory=None, separator="_"):
     return os.path.join(directory, name)
 
 
-def ideal_helices(optd):
+def ideal_helices(optd, ensembles=False):
     """Get some ideal helices
 
     Parameters
     ----------
     nresidues : int
        Number of residues to be used
+
+    ensembles : bool
+       If True then helical ensembles will be used instead of polyalanine ideal helices
 
     Returns
     -------
@@ -282,13 +285,50 @@ def ideal_helices(optd):
     """
     nresidues = optd['fasta_length']
     include_dir = os.path.join(SHARE_DIR, 'include')
-    names = ['polyala5', 'polyala10', 'polyala15', 'polyala20', 'polyala25', 'polyala30', 'polyala35', 'polyala40']
-    polya_lengths = [5, 10, 15, 20, 25, 30, 35, 40]
+    if not ensembles:
+        names = ['polyala_5', 'polyala_10', 'polyala_15', 'polyala_20', 'polyala_25', 'polyala_30', 'polyala_35',
+                 'polyala_40']
+    else:
+        names = ['ensemble_20_bfactor2_homogenous', 'ensemble_20_bfactor2_heterogenous',
+                 'ensemble_20_bfactor1_heterogenous', 'ensemble_20_bfactor1_homogenous',
+                 'ensemble_20_bfactor4_heterogenous', 'ensemble_20_bfactor3_homogenous',
+                 'ensemble_20_bfactor3_heterogenous', 'ensemble_20_bfactor4_homogenous',
+                 'ensemble_15_bfactor2_heterogenous', 'ensemble_15_bfactor2_homogenous',
+                 'ensemble_15_bfactor1_heterogenous', 'ensemble_15_bfactor1_homogenous',
+                 'ensemble_15_bfactor4_heterogenous',
+                 'ensemble_15_bfactor3_heterogenous', 'ensemble_15_bfactor4_homogenous',
+                 'ensemble_15_bfactor3_homogenous', 'ensemble_25_bfactor2_homogenous',
+                 'ensemble_25_bfactor2_heterogenous', 'ensemble_25_bfactor1_heterogenous',
+                 'ensemble_25_bfactor1_homogenous', 'ensemble_25_bfactor4_homogenous',
+                 'ensemble_25_bfactor3_homogenous', 'ensemble_25_bfactor4_heterogenous',
+                 'ensemble_25_bfactor3_heterogenous', 'ensemble_30_bfactor2_homogenous',
+                 'ensemble_30_bfactor2_heterogenous', 'ensemble_30_bfactor1_heterogenous',
+                 'ensemble_30_bfactor1_homogenous', 'ensemble_30_bfactor4_homogenous',
+                 'ensemble_30_bfactor4_heterogenous',
+                 'ensemble_30_bfactor3_heterogenous', 'ensemble_30_bfactor3_homogenous',
+                 'ensemble_35_bfactor2_homogenous', 'ensemble_35_bfactor2_heterogenous',
+                 'ensemble_35_bfactor1_heterogenous', 'ensemble_35_bfactor1_homogenous',
+                 'ensemble_35_bfactor4_heterogenous',
+                 'ensemble_35_bfactor4_homogenous', 'ensemble_35_bfactor3_homogenous',
+                 'ensemble_35_bfactor3_heterogenous', 'ensemble_40_bfactor2_homogenous',
+                 'ensemble_40_bfactor2_heterogenous', 'ensemble_40_bfactor1_heterogenous',
+                 'ensemble_40_bfactor1_homogenous', 'ensemble_40_bfactor4_heterogenous',
+                 'ensemble_40_bfactor3_heterogenous', 'ensemble_40_bfactor4_homogenous',
+                 'ensemble_40_bfactor3_homogenous', 'ensemble_10_bfactor2_heterogenous',
+                 'ensemble_10_bfactor2_homogenous', 'ensemble_10_bfactor1_heterogenous',
+                 'ensemble_10_bfactor1_homogenous', 'ensemble_10_bfactor3_homogenous',
+                 'ensemble_10_bfactor4_homogenous', 'ensemble_10_bfactor3_heterogenous',
+                 'ensemble_10_bfactor4_heterogenous', 'ensemble_5_bfactor2_heterogenous',
+                 'ensemble_5_bfactor2_homogenous', 'ensemble_5_bfactor1_heterogenous',
+                 'ensemble_5_bfactor1_homogenous', 'ensemble_5_bfactor4_homogenous',
+                 'ensemble_5_bfactor3_heterogenous', 'ensemble_5_bfactor3_homogenous',
+                 'ensemble_5_bfactor4_heterogenous']
 
     ensemble_options = {}
     ensembles_data = []
     pdbs = []
-    for name, nres in zip(names, polya_lengths):
+    for name in names:
+        nres = int(name.split('_')[1])
         ncopies = nresidues / nres
         if ncopies < 1:
             ncopies = 1

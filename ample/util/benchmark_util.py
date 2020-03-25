@@ -12,7 +12,8 @@ import pandas as pd
 import shutil
 import sys
 
-from ample.util import ample_util, csymmatch, mtz_util, pdb_edit, pdb_model, reforigin, residue_map, rio, shelxe, tm_util
+from ample.util import ample_util, csymmatch, mtz_util, pdb_edit, pdb_model, reforigin, residue_map, rio, shelxe, \
+    tm_util
 
 logger = logging.getLogger(__name__)
 
@@ -140,9 +141,8 @@ def analyse(amoptd, newroot=None):
         mtz_util.to_hkl(amoptd['mtz'], hkl_file=os.path.join(amoptd['benchmark_dir'], SHELXE_STEM + ".hkl"))
         shutil.copyfile(amoptd['native_pdb_std'], os.path.join(amoptd['benchmark_dir'], SHELXE_STEM + ".ent"))
 
-    if amoptd['native_pdb'] and not (
-        amoptd['homologs'] or amoptd['ideal_helices'] or amoptd['import_ensembles'] or amoptd['single_model_mode']
-    ):
+    if amoptd['native_pdb'] and not (amoptd['homologs'] or amoptd['ideal_helices'] or amoptd['helical_ensembles']
+                                     or amoptd['import_ensembles'] or amoptd['single_model_mode']):
         analyseModels(amoptd)
 
     # Get the ensembling data
@@ -176,7 +176,7 @@ def analyse(amoptd, newroot=None):
 
         # Hack for ideal helices where num_residues are missing
         if amoptd['ideal_helices'] and ('num_residues' not in d or d['num_residues'] is None):
-            d['num_residues'] = int(d['ensemble_name'].lstrip('polyala'))
+            d['num_residues'] = int(d['ensemble_name'].lstrip('polyala_'))
 
         # Get the ensemble data and add to the MRBUMP data
         d['ensemble_percent_model'] = int((float(d['num_residues']) / float(amoptd['fasta_length'])) * 100)
@@ -233,7 +233,6 @@ def analyse(amoptd, newroot=None):
 
 
 def analyseModels(amoptd):
-
     # Get hold of a full model so we can do the mapping of residues
     refModelPdb = glob.glob(os.path.join(amoptd['models_dir'], "*.pdb"))[0]
 
@@ -333,7 +332,6 @@ def analysePdb(amoptd):
 
 
 def analyseSolution(amoptd, d, mrinfo):
-
     logger.info("Benchmark: analysing result: {0}".format(d['ensemble_name']))
 
     mrPdb = None
@@ -395,11 +393,12 @@ def analyseSolution(amoptd, d, mrinfo):
         # to compare to the native to allow us to determine which parts of the ensemble correspond to which parts of
         # the native structure - or if we were unable to calculate a res_seq_map
         if not (
-            amoptd['homologs']
-            or amoptd['ideal_helices']
-            or amoptd['import_ensembles']
-            or amoptd['single_model_mode']
-            or amoptd['res_seq_map']
+                amoptd['homologs']
+                or amoptd['ideal_helices']
+                or amoptd['helical_ensembles']
+                or amoptd['import_ensembles']
+                or amoptd['single_model_mode']
+                or amoptd['res_seq_map']
         ):
 
             # Get reforigin info
