@@ -242,7 +242,9 @@ class Ample(object):
         elif optd['ideal_helices']:
             ample_util.ideal_helices(optd)
             logger.info("*** Using ideal helices to solve structure ***")
-            logger.warning('Ideal helices may not solve the structure, consider using -helical_ensembles instead!')
+            logger.warning('If ideal helices do not solve the structure, you may want to use -helical_ensembles in '
+                           'place of -ideal_helices. AMPLE will then use a new set of helical ensembles which has been '
+                           'very successful on solving challenging cases!')
         elif optd['helical_ensembles']:
             ample_util.ideal_helices(optd, ensembles=True)
             logger.info("*** Using helical ensembles to solve structure ***")
