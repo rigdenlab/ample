@@ -15,7 +15,9 @@ import shutil
 # Our modules
 from ample.modelling import energy_functions, octopus_predict, multimer_definitions
 from ample.parsers import psipred_parser
-from ample.util import ample_util, pdb_edit, sequence_util, workers_util
+from ample.util import ample_util, pdb_edit, sequence_util
+from pyjob.factory import TaskFactory
+from pyjob.script import ScriptCollector, Script
 
 logger = logging.getLogger(__name__)
 
@@ -539,13 +541,12 @@ class RosettaModel(object):
         fasta = os.path.split(self.fasta)[1]
         shutil.copy2(self.fasta, os.path.join(self.fragments_directory, fasta))
 
-        script = os.path.join(self.fragments_directory, "mkfrags.sh")
-        with open(script, 'w') as f:
-            f.write("#!/bin/bash\n")
-            f.write(" ".join(self.fragment_cmd()) + "\n")
-        os.chmod(script, 0o777)
+        collector = ScriptCollector(None)
+        script = Script(directory=self.fragments_directory, stem="mkfrags")
+        script.append(" ".join(self.fragment_cmd()))
+        collector.add(script)
 
-        success = self.run_scripts([script], job_time=21600, monitor=None)
+        success = self.run_scripts(collector, run_dir=self.fragments_directory, job_time=21600, monitor=None)
         logfile = "{0}.log".format(os.path.splitext(script)[0])
         if not success:
             logfile = "{0}.log".format(os.path.abspath(os.path.splitext(os.path.basename(script))[0]))
@@ -645,25 +646,19 @@ class RosettaModel(object):
         os.mkdir(idealise_dir)
         os.chdir(idealise_dir)
         logger.info("Idealising {0} models in directory: {1}".format(len(models), idealise_dir))
-        id_scripts = []
+        collector = ScriptCollector(None)
         id_pdbs = []
-        job_time = 7200
         # WHAT ABOUT STDOUT?
         for model in models:
-            # run idealise on models
-            script = "#!/bin/bash\n"
-            script += " ".join(self.idealize_cmd(pdbin=model)) + "\n"
+            name = os.path.splitext(os.path.basename(model))[0]
+            script = Script(directory=idealise_dir, prefix=name, stem="_idealize")
+            script.append(" ".join(self.idealize_cmd(pdbin=model)))
             # Get the name of the pdb that will be output
             id_pdbs.append(self.idealize_pdbout(pdbin=model, directory=idealise_dir))
-            name = os.path.splitext(os.path.basename(model))[0]
-            sname = os.path.join(idealise_dir, "{0}_idealize.sh".format(name))
-            with open(sname, 'w') as w:
-                w.write(script)
-            os.chmod(sname, 0o777)
-            id_scripts.append(sname)
+            collector.add(script)
 
         # Run the jobs
-        success = self.run_scripts(job_scripts=id_scripts, job_time=job_time, job_name='idealize', monitor=None)
+        success = self.run_scripts(collector, run_dir=idealise_dir, job_time=7200, job_name='idealize', monitor=None)
         if not success:
             raise RuntimeError(
                 "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(
@@ -698,7 +693,7 @@ class RosettaModel(object):
         if rosetta_executable is None:
             rosetta_executable = self.rosetta_relax_exe
         seeds = self.generate_seeds(len(jobs_per_proc))
-        job_scripts = []
+        collector = ScriptCollector(None)
         dir_list = []
         for i, njobs in enumerate(jobs_per_proc):
             if njobs < 1:
@@ -706,23 +701,16 @@ class RosettaModel(object):
             d = os.path.join(self.work_dir, "job_{0}".format(i))
             os.mkdir(d)
             dir_list.append(d)
-            script = """#!/bin/bash
-{} \\
--database {} \\
-@{} \\
--out:nstruct {} \\
--run:constant_seed \\
--run:jran {}
-""".format(
-                rosetta_executable, self.rosetta_db, flagsfile, njobs, seeds[i]
-            )
-            sname = os.path.join(d, "model_{0}.sh".format(i))
-            with open(sname, 'w') as w:
-                w.write(script)
-            os.chmod(sname, 0o777)
-            job_scripts.append(sname)
+            script = Script(directory=d, prefix="job_", stem=i)
+            script.append(rosetta_executable)
+            script.append("-database {}".format(self.rosetta_db))
+            script.append("@{}".format(flagsfile))
+            script.append("-out:nstruct {}".format(njobs))
+            script.append("-run:constant_seed")
+            script.append("-run:jran {}".format(seeds[i]))
+            collector.add(script)
 
-        success = self.run_scripts(job_scripts, job_time=job_time, job_name='abinitio')
+        success = self.run_scripts(collector, run_dir=self.work_dir, job_time=job_time, job_name='abinitio')
         if not success:
             raise RuntimeError(
                 "Error running ROSETTA in directory: {0}\nPlease check the log files for more information.".format(
@@ -864,24 +852,20 @@ class RosettaModel(object):
         remodel_dir = os.getcwd()
         proc_map = self.remodel_proc_map(id_pdbs, ntimes)
         seeds = self.generate_seeds(len(proc_map))
-        job_scripts = []
         dir_list = []
         job_time = 7200
+        collector = ScriptCollector(None)
         for i, (id_model, nstruct) in enumerate(proc_map):
             name = "job_{0}".format(i)
             d = os.path.join(remodel_dir, name)
             os.mkdir(d)
             dir_list.append(d)  # job script
-            script = "#!/bin/bash" + os.linesep
+            script = Script(directory=d, stem=name)
             cmd = self.mr_cmd(template=id_model, alignment=alignment_file, nstruct=nstruct, seed=seeds[i])
-            script += " \\\n".join(cmd) + os.linesep
-            sname = os.path.join(d, "{0}.sh".format(name))
-            with open(sname, 'w') as w:
-                w.write(script)
-            os.chmod(sname, 0o777)
-            job_scripts.append(sname)
+            script.append(" \\\n".join(cmd))
+            collector.add(script)
 
-        success = self.run_scripts(job_scripts=job_scripts, job_time=job_time, job_name='remodel', monitor=None)
+        success = self.run_scripts(collector, run_dir=remodel_dir, job_time=job_time, job_name='remodel', monitor=None)
         if not success:
             msg = (
                 "Error running ROSETTA in directory: {0}."
@@ -944,23 +928,22 @@ class RosettaModel(object):
                             )  # We need to split things so that each processor does a chunk of the work
         return proc_map
 
-    def run_scripts(self, job_scripts, job_time=None, job_name=None, monitor=None):
-        # We need absolute paths to the scripts
-        # job_scripts=[os.path.abspath(j) for j in job_scripts]
-        return workers_util.run_scripts(
-            job_scripts=job_scripts,
-            monitor=monitor,
-            check_success=None,
-            early_terminate=None,
-            nproc=self.nproc,
-            job_time=job_time,
-            job_name=job_name,
-            submit_cluster=self.submit_cluster,
-            submit_qtype=self.submit_qtype,
-            submit_queue=self.submit_queue,
-            submit_array=self.submit_array,
-            submit_max_array=self.submit_max_array,
-        )
+    def run_scripts(self, collector, run_dir=None, job_time=None, job_name=None, monitor=None):
+        with TaskFactory(
+                self.submit_qtype,
+                collector,
+                cwd=run_dir,
+                run_time=job_time,
+                name=job_name,
+                processes=self.nproc,
+                max_array_size=self.submit_max_array,
+                queue=self.submit_queue,
+                shell="/bin/bash",
+        ) as task:
+            task.run()
+            task.wait(interval=5, monitor=monitor)
+
+        return task.completed
 
     def setup_domain_restraints(self):
         """Create the file for restricting the domain termini and return the path to the file."""
@@ -1049,8 +1032,10 @@ class RosettaModel(object):
 
         # Runtime options
         self.nproc = optd['nproc']
-        self.submit_cluster = optd['submit_cluster']
         self.submit_qtype = optd['submit_qtype']
+        self.submit_cluster = False
+        if self.submit_qtype != 'local':
+            self.submit_cluster = True
         self.submit_queue = optd['submit_queue']
         self.submit_array = optd['submit_array']
         self.submit_max_array = optd['submit_max_array']
@@ -1237,18 +1222,17 @@ class RosettaModel(object):
 
         # Now generate lips file
         logger.debug('Generating lips file from span')
-        script = os.path.join(tm_dir, "run_lips.sh")
+        collector = ScriptCollector(None)
+        lips_script = Script(directory=tm_dir, stem="run_lips")
         cmd = [self.run_lips, fasta, self.spanfile, self.blastpgp, self.nr, self.align_blast]
-        with open(script, 'w') as f:
-            f.write("#!/bin/bash\n")
-            f.write(" ".join(cmd) + "\n")
-        os.chmod(script, 0o777)
+        lips_script.append(" ".join(cmd))
+        collector.add(lips_script)
 
-        success = self.run_scripts([script], job_time=21600, monitor=None)
+        success = self.run_scripts(collector, run_dir=tm_dir, job_time=21600, monitor=None)
         # Script only uses first 4 chars to name files
         lipofile = os.path.join(tm_dir, self.name[0:4] + ".lips4")
         if not success or not os.path.exists(lipofile):
-            logfile = "{0}.log".format(os.path.splitext((script))[0])
+            logfile = "run_lips.log"
             raise RuntimeError("Error generating lips file {0}. Please check the logfile {1}".format(lipofile, logfile))
 
         self.lipofile = lipofile

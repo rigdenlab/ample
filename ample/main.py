@@ -24,8 +24,9 @@ from ample.util import pdb_edit
 from ample.util import process_models
 from ample.util import pyrvapi_results
 from ample.util import reference_manager
-from ample.util import workers_util
 from ample.util import version
+
+from pyjob.factory import TaskFactory
 
 __author__ = "Jens Thomas, Felix Simkovic, Adam Simpkin, Ronan Keegan, and Jaclyn Bibby"
 __credits__ = "Daniel Rigden, Martyn Winn, and Olga Mayans"
@@ -151,20 +152,19 @@ class Ample(object):
             # Pickle dictionary so it can be opened by the job to get the parameters
             ample_util.save_amoptd(optd)
             script = benchmark_util.cluster_script(optd)
-            workers_util.run_scripts(
-                job_scripts=[script],
-                monitor=monitor,
-                nproc=optd['nproc'],
-                job_time=43200,
-                job_name='benchmark',
-                submit_cluster=optd['submit_cluster'],
-                submit_qtype=optd['submit_qtype'],
-                submit_queue=optd['submit_queue'],
-                submit_pe_lsf=optd['submit_pe_lsf'],
-                submit_pe_sge=optd['submit_pe_sge'],
-                submit_array=optd['submit_array'],
-                submit_max_array=optd['submit_max_array'],
-            )
+            with TaskFactory(
+                    optd['submit_qtype'],
+                    script,
+                    cwd=optd['work_dir'],
+                    run_time=43200,
+                    name='benchmark',
+                    max_array_size=optd['nproc'],
+                    queue=optd['submit_queue'],
+                    shell="/bin/bash",
+            ) as task:
+                task.run()
+                task.wait(interval=5, monitor=monitor)
+
             # queue finished so unpickle results
             optd.update(ample_util.read_amoptd(optd['results_path']))
         else:
@@ -260,20 +260,18 @@ class Ample(object):
                 ample_util.save_amoptd(optd)
                 script = ensembler.cluster_script(optd)
                 ensembler_timeout = ensembler.get_ensembler_timeout(optd)
-                workers_util.run_scripts(
-                    job_scripts=[script],
-                    monitor=monitor,
-                    nproc=optd['nproc'],
-                    job_time=ensembler_timeout,
-                    job_name='ensemble',
-                    submit_cluster=optd['submit_cluster'],
-                    submit_qtype=optd['submit_qtype'],
-                    submit_queue=optd['submit_queue'],
-                    submit_pe_lsf=optd['submit_pe_lsf'],
-                    submit_pe_sge=optd['submit_pe_sge'],
-                    submit_array=optd['submit_array'],
-                    submit_max_array=optd['submit_max_array'],
-                )
+                with TaskFactory(
+                        optd['submit_qtype'],
+                        script,
+                        cwd=optd['work_dir'],
+                        run_time=ensembler_timeout,
+                        name='benchmark',
+                        max_array_size=optd['nproc'],
+                        queue=optd['submit_queue'],
+                        shell="/bin/bash",
+                ) as task:
+                    task.run()
+                    task.wait(interval=5, monitor=monitor)
                 # queue finished so unpickle results
                 optd.update(ample_util.read_amoptd(optd['results_path']))
             else:
@@ -402,24 +400,22 @@ class Ample(object):
 
         # Change to mrbump directory before running
         os.chdir(optd['mrbump_dir'])
-        ok = workers_util.run_scripts(
-            job_scripts=optd['mrbump_scripts'],
-            monitor=monitor,
-            check_success=mrbump_util.checkSuccess,
-            early_terminate=optd['early_terminate'],
-            nproc=optd['nproc'],
-            job_time=mrbump_util.MRBUMP_RUNTIME,
-            job_name='mrbump',
-            submit_cluster=optd['submit_cluster'],
-            submit_qtype=optd['submit_qtype'],
-            submit_queue=optd['submit_queue'],
-            submit_pe_lsf=optd['submit_pe_lsf'],
-            submit_pe_sge=optd['submit_pe_sge'],
-            submit_array=optd['submit_array'],
-            submit_max_array=optd['submit_max_array'],
-        )
 
-        if not ok:
+        with TaskFactory(
+                optd['submit_qtype'],
+                optd['mrbump_scripts'],
+                cwd=bump_dir,
+                run_time=mrbump_util.MRBUMP_RUNTIME,
+                name="mrbump",
+                processes=optd['nproc'],
+                max_array_size=optd['nproc'],
+                queue=optd['submit_queue'],
+                shell="/bin/bash",
+        ) as task:
+            task.run()
+            task.wait(interval=5, monitor=monitor, success_f=mrbump_util.checkSuccess)
+
+        if not task.completed:
             msg = (
                     "An error code was returned after running MRBUMP on the ensembles!\n"
                     + "For further information check the logs in directory: {0}".format(optd['mrbump_dir'])

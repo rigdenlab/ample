@@ -15,6 +15,7 @@ if __name__ == "__main__":
 
 from ample.util import ample_util, mrbump_cmd, printTable
 from mrbump.parsers import parse_arpwarp, parse_buccaneer, parse_phaser
+from pyjob.script import ScriptCollector, Script
 
 TOP_KEEP = 3  # How many of the top shelxe/phaser results to keep for the gui
 MRBUMP_RUNTIME = 172800  # allow 48 hours for each mrbump job
@@ -657,7 +658,7 @@ def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_
     if not directory:
         directory = os.getcwd()
 
-    job_scripts = []
+    collector = ScriptCollector(None)
     keyword_options = {}
     for ensemble_pdb in ensemble_pdbs:
         name = os.path.splitext(os.path.basename(ensemble_pdb))[0]  # Get name from pdb path
@@ -674,12 +675,12 @@ def write_mrbump_files(ensemble_pdbs, amoptd, job_time=MRBUMP_RUNTIME, ensemble_
             f.write(keyword_str)
 
         script = write_jobscript(name, keyword_file, amoptd, directory=directory, job_time=job_time)
-        job_scripts.append(script)
+        collector.add(script)
 
-    if not len(job_scripts):
+    if not len(collector.scripts):
         raise RuntimeError("No job scripts created!")
 
-    return job_scripts
+    return collector
 
 
 def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, extra_options={}):
@@ -690,22 +691,19 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
         directory = os.getcwd()
 
     # Next the script to run mrbump
-    script_path = os.path.abspath(os.path.join(directory, name + ample_util.SCRIPT_EXT))
-    with open(script_path, "w") as job_script:
-        # Header
-        if not sys.platform.startswith("win"):
-            script_header = '#!/bin/bash\n'
-            script_header += '[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n'
-            job_script.write(script_header)
+    script = Script(directory=directory, prefix="", stem=name, suffix=ample_util.SCRIPT_EXT)
+    if not sys.platform.startswith("win"):
+        script.append('[[ ! -d $CCP4_SCR ]] && mkdir $CCP4_SCR\n\n')
 
-        # Get the mrbump command-line
-        jobcmd = mrbump_cmd.mrbump_cmd(name, amoptd['mtz'], amoptd['mr_sequence'], keyword_file)
-        job_script.write(jobcmd)
+    # Get the mrbump command-line
+    jobcmd = mrbump_cmd.mrbump_cmd(name, amoptd['mtz'], amoptd['mr_sequence'], keyword_file)
+    script.append(jobcmd)
 
-    # Make executable
-    os.chmod(script_path, 0o777)
-    logger.debug("Wrote MRBUMP script: {0}".format(script_path))
-    return script_path
+    # Write script
+    script.write()
+    logger.debug("Wrote MRBUMP script: {0}".format(script.path))
+
+    return script
 
 
 if __name__ == "__main__":

@@ -1,10 +1,11 @@
-__author__ = "Jens Thomas & Felix Simkovic"
+__author__ = "Jens Thomas, Felix Simkovic & Adam Simpkin"
 __date__ = "10 June 2019"
 __version__ = "1.0"
 
 import argparse
 import os
 from ample.modelling.multimer_definitions import MULTIMER_MODES
+from pyjob.factory import TASK_PLATFORMS
 
 
 class BoolAction(argparse.Action):
@@ -63,6 +64,8 @@ def add_cluster_submit_options(parser=None):
     submit_group.add_argument(
         '-submit_array', action=BoolAction, nargs='?', metavar='True/False', help='Submit SGE jobs as array jobs'
     )
+
+    # TODO: Remove this argument at a future point as it has been deprecated
     submit_group.add_argument(
         '-submit_cluster',
         action=BoolAction,
@@ -78,14 +81,9 @@ def add_cluster_submit_options(parser=None):
     submit_group.add_argument(
         '-submit_num_array_jobs', type=int, help='The number of jobs to run concurrently with SGE array job submission'
     )
-    submit_group.add_argument(
-        '-submit_pe_lsf', help='Cluster submission: string to set number of processors for LSF queueing system'
-    )
-    submit_group.add_argument(
-        '-submit_pe_sge', help='Cluster submission: string to set number of processors for SGE queueing system'
-    )
     submit_group.add_argument('-submit_queue', help='The queue to submit to on the cluster.')
-    submit_group.add_argument('-submit_qtype', help='Cluster submission queue type - currently support SGE and LSF')
+    submit_group.add_argument('-submit_qtype', choices=TASK_PLATFORMS.keys(), help='Cluster submission queue type',
+                              default='local')
     return parser
 
 
