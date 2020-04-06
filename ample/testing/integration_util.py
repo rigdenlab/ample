@@ -14,7 +14,10 @@ import sys
 
 from ample.constants import SHARE_DIR, AMPLE_PKL
 from ample.testing.constants import CLUSTER_ARGS, EXTRA_ARGS
-from ample.util import ample_util, workers_util
+from ample.util import ample_util
+from pyjob.factory import TaskFactory
+from pyjob.script import ScriptCollector, Script
+
 
 ENSEMBLER = 'ensembler'
 MODELLING = 'modelling'
@@ -138,23 +141,36 @@ class AMPLEIntegrationFramework(object):
         if clean_up:
             self.clean()
 
-        scripts = self._create_scripts(rosetta_dir, **kwargs)
-        if not len(scripts):
+        collector = self._create_scripts(rosetta_dir, **kwargs)
+        if not len(collector.scripts):
             raise RuntimeError("Could not find any test cases to run!")
 
         logger.info("The following test cases will be run:")
         for name in self.test_dict.keys():
             logger.info("{0}: {1}".format(name, self.run_dir))
 
+        processes = nproc
+        submit_max_array = None
         ## Run all the jobs
         # If we're running on a cluster, we run on as many processors as there are jobs,
         # as the jobs are just sitting and monitoring the queue
-        if 'submit_cluster' in kwargs and kwargs['submit_cluster']:
+        if kwargs['submit_qtype'] != 'local':
             logger.info("Jobs will be submitted to a cluster queueing system")
-            nproc = len(scripts)
+            processes = 1
+            submit_max_array = nproc
 
         if not dry_run:
-            workers_util.run_scripts(job_scripts=scripts, monitor=None, nproc=nproc, job_name='test')
+            with TaskFactory(
+                    kwargs['submit_qtype'],
+                    collector,
+                    name='test',
+                    processes=processes,
+                    max_array_size=submit_max_array,
+                    queue=kwargs['submit_queue'],
+                    shell="/bin/bash",
+            ) as task:
+                task.run()
+                task.wait(interval=5, monitor=None)
 
         # Now check the results using the unittesting framework
         self.run_unittest_suite()
@@ -162,7 +178,7 @@ class AMPLEIntegrationFramework(object):
 
     def _create_scripts(self, rosetta_dir, **kwargs):
         """Create scripts and set path to working directory"""
-        scripts = []
+        collector = ScriptCollector(None)
         owd = os.getcwd()
         for name in self.test_dict.keys():
             os.chdir(self.run_dir)
@@ -187,8 +203,8 @@ class AMPLEIntegrationFramework(object):
             if testcase_type != 'ample' and sys.platform.startswith('win'):
                 logger.critical("Cannot run module testcases on windows due to multiprocessing bug")
                 continue
-            script = self.write_script(work_dir, args + [['-work_dir', work_dir]], testcase_type)
-            scripts.append(script)
+            script = self.write_script(self.run_dir, name, args + [['-work_dir', work_dir]], testcase_type)
+            collector.add(script)
             # Set path to the directory the case is run so we can pass it to the unittest
             self.test_dict[name]['work_dir'] = work_dir
 
@@ -197,7 +213,7 @@ class AMPLEIntegrationFramework(object):
                 self.test_dict[name]['setup'](self.run_dir)
 
             os.chdir(owd)  # Back to where we started
-        return scripts
+        return collector
 
     def _is_in_args(self, argt, args):
         if type(argt) is str:
@@ -251,11 +267,11 @@ class AMPLEIntegrationFramework(object):
             suite.addTests(_suite)
         TextTestRunner(verbosity=2).run(suite)
 
-    def write_script(self, work_dir, args, testcase_type):
+    def write_script(self, work_dir, name, args, testcase_type):
         """Write script"""
         linechar = "^" if sys.platform.startswith('win') else "\\"
-        script = work_dir + ample_util.SCRIPT_EXT
 
+        script = Script(directory=work_dir, stem=name)
         test_exe = os.path.join(os.environ["CCP4"], "bin", "ample")
         test_exe = test_exe + ample_util.SCRIPT_EXT if sys.platform.startswith("win") else test_exe
         if testcase_type == ENSEMBLER:
@@ -265,16 +281,11 @@ class AMPLEIntegrationFramework(object):
 
         # All arguments need to be strings
         args = [map(str, a) for a in args]
-        with open(script, 'w') as f:
-            f.write(ample_util.SCRIPT_HEADER + os.linesep)
-            f.write(os.linesep)
-            f.write("{0} {1}".format(test_exe, linechar + os.linesep))
-            for argt in args:
-                f.write(" ".join(argt) + " " + linechar + os.linesep)
-            f.write(os.linesep)
-            f.write(os.linesep)
-        os.chmod(script, 0o777)
-        return os.path.abspath(script)
+        script.append("{0} {1}".format(test_exe, linechar))
+        for argt in args:
+            script.append(" ".join(argt) + " " + linechar)
+
+        return script
 
 
 class SuiteLoader(object):
