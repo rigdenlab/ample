@@ -648,10 +648,10 @@ class RosettaModel(object):
         logger.info("Idealising {0} models in directory: {1}".format(len(models), idealise_dir))
         collector = ScriptCollector(None)
         id_pdbs = []
-        # WHAT ABOUT STDOUT?
         for model in models:
             name = os.path.splitext(os.path.basename(model))[0]
             script = Script(directory=idealise_dir, prefix=name, stem="_idealize")
+
             script.append(" ".join(self.idealize_cmd(pdbin=model)))
             # Get the name of the pdb that will be output
             id_pdbs.append(self.idealize_pdbout(pdbin=model, directory=idealise_dir))
@@ -701,13 +701,15 @@ class RosettaModel(object):
             d = os.path.join(self.work_dir, "job_{0}".format(i))
             os.mkdir(d)
             dir_list.append(d)
-            script = Script(directory=d, prefix="job_", stem=i)
-            script.append(rosetta_executable)
-            script.append("-database {}".format(self.rosetta_db))
-            script.append("@{}".format(flagsfile))
-            script.append("-out:nstruct {}".format(njobs))
-            script.append("-run:constant_seed")
+            script = Script(directory=d, prefix="job_", stem=str(i))
+            script.append("cd {}".format(d))
+            script.append("{} \\".format(rosetta_executable))
+            script.append("-database {} \\".format(self.rosetta_db))
+            script.append("@{} \\".format(flagsfile))
+            script.append("-out:nstruct {} \\".format(njobs))
+            script.append("-run:constant_seed \\")
             script.append("-run:jran {}".format(seeds[i]))
+            script.append("cd {}".format(self.work_dir))
             collector.add(script)
 
         success = self.run_scripts(collector, run_dir=self.work_dir, job_time=job_time, job_name='abinitio')
@@ -862,7 +864,9 @@ class RosettaModel(object):
             dir_list.append(d)  # job script
             script = Script(directory=d, stem=name)
             cmd = self.mr_cmd(template=id_model, alignment=alignment_file, nstruct=nstruct, seed=seeds[i])
+            script.append("cd {}".format(d))
             script.append(" \\\n".join(cmd))
+            script.append("cd {}".format(remodel_dir))
             collector.add(script)
 
         success = self.run_scripts(collector, run_dir=remodel_dir, job_time=job_time, job_name='remodel', monitor=None)
@@ -932,10 +936,10 @@ class RosettaModel(object):
         with TaskFactory(
                 self.submit_qtype,
                 collector,
-                cwd=run_dir,
+                directory=run_dir,
                 run_time=job_time,
                 name=job_name,
-                processes=self.nproc,
+                processes=self.processes,
                 max_array_size=self.submit_max_array,
                 queue=self.submit_queue,
                 shell="/bin/bash",
@@ -1031,14 +1035,15 @@ class RosettaModel(object):
         self.num_chains = optd['nmasu']
 
         # Runtime options
-        self.nproc = optd['nproc']
         self.submit_qtype = optd['submit_qtype']
         self.submit_cluster = False
+        self.processes = optd['nproc']
         if self.submit_qtype != 'local':
             self.submit_cluster = True
+            self.processes = 1
+            self.submit_max_array = optd['nproc']
         self.submit_queue = optd['submit_queue']
         self.submit_array = optd['submit_array']
-        self.submit_max_array = optd['submit_max_array']
 
         if optd['transmembrane_old']:
             self.transmembrane_old = True
