@@ -401,14 +401,20 @@ class Ample(object):
         # Change to mrbump directory before running
         os.chdir(optd['mrbump_dir'])
 
+        processes = optd['nproc']
+        submit_max_array = optd['submit_max_array']
+        if optd['submit_qtype'] != 'local':
+            processes = 1
+            submit_max_array = optd['nproc']
+
         with TaskFactory(
                 optd['submit_qtype'],
                 optd['mrbump_scripts'],
                 cwd=bump_dir,
                 run_time=mrbump_util.MRBUMP_RUNTIME,
                 name="mrbump",
-                processes=optd['nproc'],
-                max_array_size=optd['nproc'],
+                processes=processes,
+                max_array_size=submit_max_array,
                 queue=optd['submit_queue'],
                 shell="/bin/bash",
         ) as task:
