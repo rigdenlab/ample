@@ -419,7 +419,11 @@ class Ample(object):
                 shell="/bin/bash",
         ) as task:
             task.run()
-            task.wait(interval=5, monitor=monitor, success_f=mrbump_util.checkSuccess)
+
+            if optd['early_terminate']:
+                task.wait(interval=5, monitor=monitor, success_f=mrbump_util.checkSuccess)
+            else:
+                task.wait(interval=5, monitor=monitor)
 
         if not task.completed:
             msg = (
