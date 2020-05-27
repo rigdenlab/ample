@@ -843,6 +843,8 @@ class RosettaModel(object):
             # fasta sequence of first model
             remodel_seq = sequence_util.Sequence(fasta=self.mnr_remodel_fasta)
             alignment_file = align_mafft(remodel_seq, id_seq, logger)
+        else:
+            alignment_file = self.nmr_alignment_file
 
         # Remodel each idealized model nmr_process times
         pdbs_to_return = self.remodel(id_pdbs, self.nmr_process_ntimes, alignment_file)
