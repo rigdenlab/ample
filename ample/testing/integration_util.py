@@ -149,28 +149,27 @@ class AMPLEIntegrationFramework(object):
         for name in self.test_dict.keys():
             logger.info("{0}: {1}".format(name, self.run_dir))
 
-        processes = nproc
-        submit_max_array = None
+        nprocesses = nproc
         ## Run all the jobs
         # If we're running on a cluster, we run on as many processors as there are jobs,
         # as the jobs are just sitting and monitoring the queue
         if kwargs['submit_qtype'] != 'local':
             logger.info("Jobs will be submitted to a cluster queueing system")
-            processes = 1
-            submit_max_array = nproc
+            nprocesses = len(collector.scripts)
 
         if not dry_run:
             with TaskFactory(
                     kwargs['submit_qtype'],
                     collector,
+                    environment=kwargs['submit_pe'],
                     name='test',
-                    processes=processes,
-                    max_array_size=submit_max_array,
+                    nprocesses=nprocesses,
+                    max_array_size=kwargs['submit_max_array'],
                     queue=kwargs['submit_queue'],
                     shell="/bin/bash",
             ) as task:
                 task.run()
-                task.wait(interval=5, monitor=None)
+                task.wait(interval=5, monitor_f=None)
 
         # Now check the results using the unittesting framework
         self.run_unittest_suite()

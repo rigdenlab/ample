@@ -8,6 +8,7 @@ import platform
 import shutil
 import sys
 import time
+import warnings
 
 from ample import ensembler
 from ample.ensembler.constants import UNMODIFIED
@@ -80,6 +81,17 @@ class Ample(object):
         else:
             monitor = None
 
+        # Highlight deprecated command line arguments
+        if amopt.d['submit_cluster']:
+            message = "-%s has been deprecated and will be removed in version %s!" % ('submit_cluster', 1.6)
+            warnings.warn(message, DeprecationWarning)
+        if amopt.d["submit_pe_lsf"]:
+            message = "-%s has been deprecated and will be removed in version %s! Use -submit_pe instead" % ('submit_pe_lsf', 1.6)
+            warnings.warn(message, DeprecationWarning)
+        if amopt.d["submit_pe_sge"]:
+            message = "-%s has been deprecated and will be removed in version %s! Use -submit_pe instead" % ('submit_pe_sge', 1.6)
+            warnings.warn(message, DeprecationWarning)
+
         # Process any files we may have been given
         model_results = process_models.extract_and_validate_models(amopt.d)
         if model_results:
@@ -148,7 +160,7 @@ class Ample(object):
         return
 
     def benchmarking(self, optd):
-        if optd['submit_cluster']:
+        if optd['submit_qtype'] != 'local':
             # Pickle dictionary so it can be opened by the job to get the parameters
             ample_util.save_amoptd(optd)
             script = benchmark_util.cluster_script(optd)
@@ -156,14 +168,16 @@ class Ample(object):
                     optd['submit_qtype'],
                     script,
                     cwd=optd['work_dir'],
+                    environment=optd['submit_pe'],
                     run_time=43200,
                     name='benchmark',
-                    max_array_size=optd['nproc'],
+                    nprocesses=optd['nproc'],
+                    max_array_size=optd['submit_max_array'],
                     queue=optd['submit_queue'],
                     shell="/bin/bash",
             ) as task:
                 task.run()
-                task.wait(interval=5, monitor=monitor)
+                task.wait(interval=5, monitor_f=monitor)
 
             # queue finished so unpickle results
             optd.update(ample_util.read_amoptd(optd['results_path']))
@@ -255,7 +269,7 @@ class Ample(object):
                 msg = "ERROR! Cannot find any pdb files in: {0}".format(optd['models_dir'])
                 exit_util.exit_error(msg)
             optd['ensemble_ok'] = os.path.join(optd['work_dir'], 'ensemble.ok')
-            if optd['submit_cluster']:
+            if optd['submit_qtype'] != 'local':
                 # Pickle dictionary so it can be opened by the job to get the parameters
                 ample_util.save_amoptd(optd)
                 script = ensembler.cluster_script(optd)
@@ -264,14 +278,16 @@ class Ample(object):
                         optd['submit_qtype'],
                         script,
                         cwd=optd['work_dir'],
+                        environment=optd['submit_pe'],
                         run_time=ensembler_timeout,
                         name='benchmark',
-                        max_array_size=optd['nproc'],
+                        nprocesses=optd['nproc'],
+                        max_array_size=optd['submit_max_array'],
                         queue=optd['submit_queue'],
                         shell="/bin/bash",
                 ) as task:
                     task.run()
-                    task.wait(interval=5, monitor=monitor)
+                    task.wait(interval=5, monitor_f=monitor)
                 # queue finished so unpickle results
                 optd.update(ample_util.read_amoptd(optd['results_path']))
             else:
@@ -401,29 +417,24 @@ class Ample(object):
         # Change to mrbump directory before running
         os.chdir(optd['mrbump_dir'])
 
-        processes = optd['nproc']
-        submit_max_array = optd['submit_max_array']
-        if optd['submit_qtype'] != 'local':
-            processes = 1
-            submit_max_array = optd['nproc']
-
         with TaskFactory(
                 optd['submit_qtype'],
                 optd['mrbump_scripts'],
                 cwd=bump_dir,
+                environment=optd['submit_pe'],
                 run_time=mrbump_util.MRBUMP_RUNTIME,
                 name="mrbump",
-                processes=processes,
-                max_array_size=submit_max_array,
+                nprocesses=optd['nproc'],
+                max_array_size=optd['submit_max_array'],
                 queue=optd['submit_queue'],
                 shell="/bin/bash",
         ) as task:
             task.run()
 
             if optd['early_terminate']:
-                task.wait(interval=5, monitor=monitor, success_f=mrbump_util.checkSuccess)
+                task.wait(interval=5, monitor_f=monitor, success_f=mrbump_util.checkSuccess)
             else:
-                task.wait(interval=5, monitor=monitor)
+                task.wait(interval=5, monitor_f=monitor)
 
         if not task.completed:
             msg = (
