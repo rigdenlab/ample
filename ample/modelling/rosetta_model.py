@@ -686,7 +686,7 @@ class RosettaModel(object):
             os.mkdir(self.models_dir)
 
         # Split jobs onto separate processors - 1 for cluster, as many as will fit for desktop
-        if self.submit_cluster:
+        if self.submit_qtype != 'local':
             jobs_per_proc = [1] * self.nmodels
         else:
             jobs_per_proc = self.split_jobs(self.nmodels, self.nproc)
@@ -908,7 +908,7 @@ class RosettaModel(object):
         return pdbs_moved
 
     def remodel_proc_map(self, id_pdbs, ntimes):
-        if self.submit_cluster:
+        if self.submit_qtype != 'local':
             # For clusters we saturate the queue with single model jobs (ideally in batch mode) so that cluster
             # can manage the usage for us
             proc_map = [(pdb, 1) for pdb in id_pdbs for _ in range(ntimes)]
@@ -939,15 +939,16 @@ class RosettaModel(object):
                 self.submit_qtype,
                 collector,
                 directory=run_dir,
+                environment=self.submit_pe,
                 run_time=job_time,
                 name=job_name,
-                processes=self.processes,
+                nprocesses=self.nprocesses,
                 max_array_size=self.submit_max_array,
                 queue=self.submit_queue,
                 shell="/bin/bash",
         ) as task:
             task.run()
-            task.wait(interval=5, monitor=monitor)
+            task.wait(interval=5, monitor_f=monitor)
 
         return task.completed
 
@@ -1038,14 +1039,11 @@ class RosettaModel(object):
 
         # Runtime options
         self.submit_qtype = optd['submit_qtype']
-        self.submit_cluster = False
-        self.processes = optd['nproc']
-        if self.submit_qtype != 'local':
-            self.submit_cluster = True
-            self.processes = 1
-            self.submit_max_array = optd['nproc']
+        self.nprocesses = optd['nproc']
+        self.submit_max_array = optd['submit_max_array']
         self.submit_queue = optd['submit_queue']
         self.submit_array = optd['submit_array']
+        self.submit_pe = optd['submit_pe']
 
         if optd['transmembrane_old']:
             self.transmembrane_old = True
