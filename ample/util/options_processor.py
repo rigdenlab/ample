@@ -48,12 +48,12 @@ def check_mandatory_options(optd):
         msg = "Only one option of -contact_file or -restraints_file allowed."
         _exit(msg, optd['work_dir'])
 
-    if not optd['restart_pkl'] and not (optd['mtz'] or optd['sf_cif']):
+    if not optd['restart_pkl'] and not (optd['mtz'] or optd['sf_cif']) and optd['do_mr']:
         msg = "A crystallographic data file must be supplied with the -mtz or -sc_cif options."
         _exit(msg, optd['work_dir'])
 
     if optd['do_mr'] and (optd['mtz'] and optd['sf_cif']):
-        msg = "Please supply a single crystallographic data file."
+        msg = "Please supply a single crystallographic data file. {}"
         _exit(msg, optd['work_dir'])
 
     if optd['devel_mode'] and optd['quick_mode']:
@@ -200,10 +200,11 @@ def process_options(optd):
     # Underscore required by rosetta make_fragments.pl
     optd['name'] += '_'
     # MTZ file processing
-    try:
-        mtz_util.processReflectionFile(optd)
-    except Exception as e:
-        raise RuntimeError("Error processing reflection file: {0}".format(e))
+    if optd['do_mr']:
+        try:
+            mtz_util.processReflectionFile(optd)
+        except Exception as e:
+            raise RuntimeError("Error processing reflection file: {0}".format(e))
     # Contact file processing
     if optd['contact_file'] or optd['bbcontacts_file'] or not optd["no_contact_prediction"]:
         contact_util.ContactUtil.check_options(optd)
@@ -219,7 +220,8 @@ def process_options(optd):
         else:
             optd['mr_keys'] = [pkey]
     process_ensemble_options(optd)
-    process_mr_options(optd)
+    if optd['do_mr']:
+        process_mr_options(optd)
     process_benchmark_options(optd)
 
     if optd['submit_qtype']:
