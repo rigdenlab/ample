@@ -184,6 +184,7 @@ def add_general_options(parser=None):
     parser.add_argument(
         '-models',
         metavar='models',
+        type=os.path.abspath,
         help='Path to a folder of PDB decoys, or a tarred and gzipped/bziped, or zipped collection of decoys',
     )
     parser.add_argument(
