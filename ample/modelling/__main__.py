@@ -66,10 +66,7 @@ rm.multimer_modelling = args.multimer_modelling
 rm.nchains = args.nchains
 
 rm.nproc = args.nproc
-if args.submit_qtype == 'local':
-    rm.submit_cluster = False
-else:
-    rm.submit_cluster = True
+rm.submit_cluster = args.submit_qtype != "local"
 rm.submit_qtype = args.submit_qtype
 rm.submit_queue = args.submit_queue
 rm.submit_array = args.submit_array

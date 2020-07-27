@@ -701,7 +701,7 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
 
     # Write script
     script.write()
-    logger.debug("Wrote MRBUMP script: {0}".format(script.path))
+    logger.debug("Wrote MRBUMP script: %s", script.path)
 
     return script
 
