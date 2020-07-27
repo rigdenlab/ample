@@ -1,10 +1,11 @@
-__author__ = "Jens Thomas & Felix Simkovic"
+__author__ = "Jens Thomas, Felix Simkovic & Adam Simpkin"
 __date__ = "10 June 2019"
 __version__ = "1.0"
 
 import argparse
 import os
 from ample.modelling.multimer_definitions import MULTIMER_MODES
+from pyjob.factory import TASK_PLATFORMS
 
 
 class BoolAction(argparse.Action):
@@ -61,8 +62,12 @@ def add_cluster_submit_options(parser=None):
         parser = argparse.ArgumentParser()
     submit_group = parser.add_argument_group('Cluster queue submission options')
     submit_group.add_argument(
-        '-submit_array', action=BoolAction, nargs='?', metavar='True/False', help='Submit SGE jobs as array jobs'
+        '-submit_array', action=BoolAction, nargs='?', metavar='True/False', help='Submit cluster jobs as an array'
     )
+
+    ####################################################################################################################
+    # TO BE DEPRECATED
+    ####################################################################################################################
     submit_group.add_argument(
         '-submit_cluster',
         action=BoolAction,
@@ -71,6 +76,14 @@ def add_cluster_submit_options(parser=None):
         help='Submit jobs to a cluster - need to set -submit_qtype flag to specify the batch queue system.',
     )
     submit_group.add_argument(
+        '-submit_pe_lsf', help='Cluster submission: string to set number of processors for LSF queueing system'
+    )
+    submit_group.add_argument(
+        '-submit_pe_sge', help='Cluster submission: string to set number of processors for SGE queueing system'
+    )
+    ####################################################################################################################
+
+    submit_group.add_argument(
         '-submit_max_array',
         type=int,
         help='The maximum number of jobs to run concurrently with SGE array job submission',
@@ -78,14 +91,10 @@ def add_cluster_submit_options(parser=None):
     submit_group.add_argument(
         '-submit_num_array_jobs', type=int, help='The number of jobs to run concurrently with SGE array job submission'
     )
-    submit_group.add_argument(
-        '-submit_pe_lsf', help='Cluster submission: string to set number of processors for LSF queueing system'
-    )
-    submit_group.add_argument(
-        '-submit_pe_sge', help='Cluster submission: string to set number of processors for SGE queueing system'
-    )
+    submit_group.add_argument('-submit_pe', help='Cluster submission: string to set parallel environment')
     submit_group.add_argument('-submit_queue', help='The queue to submit to on the cluster.')
-    submit_group.add_argument('-submit_qtype', help='Cluster submission queue type - currently support SGE and LSF')
+    submit_group.add_argument('-submit_qtype', choices=TASK_PLATFORMS.keys(), help='Cluster submission queue type',
+                              default='local')
     return parser
 
 
@@ -175,6 +184,7 @@ def add_general_options(parser=None):
     parser.add_argument(
         '-models',
         metavar='models',
+        type=os.path.abspath,
         help='Path to a folder of PDB decoys, or a tarred and gzipped/bziped, or zipped collection of decoys',
     )
     parser.add_argument(

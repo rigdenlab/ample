@@ -36,6 +36,8 @@ from ample.util import exit_util
 from ample.util import pdb_edit
 from ample.util import printTable
 
+from pyjob import Script
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,15 +59,12 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     """
     # write out script
     work_dir = amoptd['work_dir']
-    script_path = os.path.join(work_dir, "submit_ensemble.sh")
-    with open(script_path, "w") as job_script:
-        job_script.write(ample_util.SCRIPT_HEADER + os.linesep)
-        job_script.write("export CCP4_SCR=${TMPDIR}" + os.linesep)  # Added by Ronan after issues on CCP4online server
-        job_script.write("ccp4-python -m ample.ensembler -restart_pkl {0}".format(amoptd['results_path']) + os.linesep)
+    script = Script(directory=work_dir, stem="submit_ensemble")
+    script.append("export CCP4_SCR=${TMPDIR}")
+    script.append("ccp4-python -m ample.ensembler -restart_pkl {0}".format(amoptd['results_path']))
+    script.write()
 
-    # Make executable
-    os.chmod(script_path, 0o777)
-    return script_path
+    return script
 
 
 def create_ensembles(amoptd):
