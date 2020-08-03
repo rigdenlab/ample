@@ -15,7 +15,7 @@ rosetta_dir=/opt/rosetta_bin_linux_2015.39.58186_bundle/
 $CCP4/bin/ample \
 -fasta input/5edl.fasta \
 -mtz input/5edl.mtz \
--models ../../../testfiles/metagenomic_models \
+-models ../../testfiles/metagenomic_models \
 -nproc 5 \
 -show_gui True \
 

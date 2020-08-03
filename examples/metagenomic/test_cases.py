@@ -28,7 +28,7 @@ args_vanilla = [
 # test from pre-existing models (also used as an opportunity to test the benchmark mode)
 #
 ###############################################################################
-args_from_existing_models = args_vanilla + [
+args_metagenomic = args_vanilla + [
     [ '-models', os.path.join(TESTFILES_DIR, 'metagenomic_models') ],
     [ '-native_pdb', os.path.join(INPUT_DIR, '5edl.pdb') ],                  
 ]
@@ -68,8 +68,8 @@ class AMPLETest(AMPLEBaseTest):
         self.assertTrue(result['MR_program'], 'PHASER')
         #self.assertTrue(result['native_pdb_solvent_content'], 47.67)
 
-TEST_DICT['from_existing_models'] = {
-    'args': args_from_existing_models,
+TEST_DICT['metagenomic'] = {
+    'args': args_metagenomic,
     'test':  AMPLETest,
 }
 

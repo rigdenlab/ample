@@ -14,6 +14,7 @@ import sys
 
 from ample.util import ample_util, csymmatch, mtz_util, pdb_edit, pdb_model, reforigin, residue_map, rio, shelxe, \
     tm_util
+from pyjob import Script
 
 logger = logging.getLogger(__name__)
 
@@ -524,17 +525,14 @@ def cluster_script(amoptd, python_path="ccp4-python"):
     """Create the script for benchmarking on a cluster"""
     # write out script
     work_dir = amoptd['work_dir']
-    script_path = os.path.join(work_dir, "submit_benchmark.sh")
-    with open(script_path, "w") as job_script:
-        job_script.write("#!/bin/sh\n")
-        # Find path to this directory to get path to python ensemble.py script
-        pydir = os.path.abspath(os.path.dirname(__file__))
-        benchmark_script = os.path.join(pydir, "benchmark_util.py")
-        job_script.write("{0} {1} {2} {3}\n".format(python_path, "-u", benchmark_script, amoptd['results_path']))
+    script = Script(directory=work_dir, stem="submit_benchmark")
+    pydir = os.path.abspath(os.path.dirname(__file__))
+    benchmark_script = os.path.join(pydir, "benchmark_util.py")
+    script.append("{0} {1} {2} {3}".format(python_path, "-u", benchmark_script, amoptd['results_path']))
+    script.write()
 
-    # Make executable
-    os.chmod(script_path, 0o777)
-    return script_path
+    return script
+
 
 
 def fixpath(path):

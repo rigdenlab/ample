@@ -19,7 +19,7 @@ def process_args(args):
     if args.rosetta_flagsfile:
         args.rosetta_flagsfile = os.path.abspath(args.rosetta_flagsfile)
     if args.nproc is None:
-        if args.submit_cluster:
+        if args.submit_qtype != 'local':
             args.nproc = 1
         else:
             args.nproc = multiprocessing.cpu_count()
@@ -37,7 +37,7 @@ argparse_util.add_rosetta_options(parser)
 argparse_util.add_cluster_submit_options(parser)
 
 work_dir = os.path.abspath('rosetta_modelling')
-parser.set_defaults(submit_cluster=False, submit_qtype='SGE', submit_array=True, nmodels=1000, work_dir=work_dir)
+parser.set_defaults(submit_qtype='SGE', submit_array=True, nmodels=1000, work_dir=work_dir)
 args = parser.parse_args()
 process_args(args)
 
@@ -66,7 +66,7 @@ rm.multimer_modelling = args.multimer_modelling
 rm.nchains = args.nchains
 
 rm.nproc = args.nproc
-rm.submit_cluster = args.submit_cluster
+rm.submit_cluster = args.submit_qtype != "local"
 rm.submit_qtype = args.submit_qtype
 rm.submit_queue = args.submit_queue
 rm.submit_array = args.submit_array
