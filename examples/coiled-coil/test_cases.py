@@ -31,7 +31,7 @@ if not sys.platform.startswith('win'):
     #
     ###############################################################################
 
-    args_rosetta_modelling = args_vanilla + [
+    args_coiled_coil = args_vanilla + [
         ['-rosetta_dir', '/opt/rosetta-3.5'],
         ['-frags_3mers', os.path.join(INPUT_DIR, 'aat000_03_05.200_v1_3')],
         ['-frags_9mers', os.path.join(INPUT_DIR, 'aat000_09_05.200_v1_3')],
@@ -58,8 +58,8 @@ if not sys.platform.startswith('win'):
                                "SHELXE_CC criteria not met")
 
 
-    TEST_DICT['rosetta_modelling'] = {
-        'args': args_rosetta_modelling,
+    TEST_DICT['coiled_coil'] = {
+        'args': args_coiled_coil,
         'test': AMPLETest,
     }
 
@@ -68,7 +68,7 @@ if not sys.platform.startswith('win'):
 # test from pre-existing models (also used as an opportunity to test the benchmark mode)
 #
 ###############################################################################
-args_from_existing_models = args_vanilla + [
+args_coiled_coil_existing = args_vanilla + [
     ['-models', os.path.join(TESTFILES_DIR, 'multimer_models')],
     ['-native_pdb', os.path.join(INPUT_DIR, '1g1j.pdb')],
 ]
@@ -112,8 +112,8 @@ class AMPLETest(AMPLEBaseTest):
         self.assertTrue(result['native_pdb_solvent_content'], 47.67)
 
 
-TEST_DICT['from_existing_models'] = {
-    'args': args_from_existing_models,
+TEST_DICT['coiled_coil_existing_models'] = {
+    'args': args_coiled_coil_existing,
     'test': AMPLETest,
 }
 

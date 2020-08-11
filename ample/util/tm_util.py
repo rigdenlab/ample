@@ -13,14 +13,13 @@ import os
 import random
 import string
 import sys
-import tempfile
 import warnings
 
 from ample.parsers import alignment_parser, tm_parser
 from ample.util import ample_util, pdb_edit
 
-from pyjob import Job
-from pyjob.misc import make_script
+from pyjob.factory import TaskFactory
+from pyjob.script import ScriptCollector, Script
 
 try:
     from Bio import PDB, SeqIO
@@ -178,7 +177,8 @@ class TMapps(object):
 
         logger.info('Using algorithm: {0}'.format(self.method))
         logger.info('------- Evaluating decoys -------')
-        data_entries, job_scripts, log_files = [], [], []
+        data_entries, log_files = [], []
+        collector = ScriptCollector(None)
         for model_pdb, structure_pdb in zip(models, structures):
             model_name = os.path.splitext(os.path.basename(model_pdb))[0]
             structure_name = os.path.splitext(os.path.basename(structure_pdb))[0]
@@ -186,10 +186,9 @@ class TMapps(object):
 
             if os.path.isfile(model_pdb) and os.path.isfile(structure_pdb):
                 data_entries.append([model_name, structure_name, model_pdb, structure_pdb])
-                script = make_script(
-                    [self.executable, model_pdb, structure_pdb], prefix="tmscore_", stem=stem, directory=self.tmp_dir
-                )
-                job_scripts.append(script)
+                script = Script(directory=self.tmp_dir, prefic="tmscore_", stem=stem)
+                script.append(" ".join([self.executable, model_pdb, structure_pdb]))
+                collector.add(script)
                 log_files.append(os.path.splitext(script)[0] + ".log")
             else:
                 if not os.path.isfile(model_pdb):
@@ -199,9 +198,22 @@ class TMapps(object):
                 continue
 
         logger.info('Executing TManalysis scripts')
+
         j = Job(self._qtype)
         j.submit(job_scripts, nproc=self._nproc, max_array_jobs=self._max_array_jobs, queue=self._queue, name="tmscore")
         j.wait(interval=1)
+
+        with TaskFactory(
+                self._qtype,
+                collector,
+                name="tmscore",
+                nprocesses=self._nproc,
+                max_array_size=self._max_array_jobs,
+                queue=self._queue,
+                shell="/bin/bash",
+        ) as task:
+            task.run()
+            task.wait(interval=1)
 
         self.entries = []
         for entry, log, script in zip(data_entries, log_files, job_scripts):
