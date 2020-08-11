@@ -260,8 +260,8 @@ class Ample(object):
                            'place of -ideal_helices. AMPLE will then use a new set of helical ensembles which has been '
                            'very successful on solving challenging cases!')
         elif optd['helical_ensembles']:
-            ample_util.ideal_helices(optd, ensembles=True)
-            logger.info("*** Using helical ensembles to solve structure ***")
+            ample_util.ideal_helices(optd)
+            logger.info("*** Using %s set of helical ensembles to solve structure ***" % optd['helical_ensembles_set'])
         else:
             # Check we have some models to work with
             if not (optd['single_model_mode'] or optd['processed_models']):

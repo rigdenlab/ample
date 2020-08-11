@@ -168,6 +168,8 @@ def add_general_options(parser=None):
         metavar='True/False',
         help='Use helical ensembles to solve structure (64 ensembles)',
     )
+    parser.add_argument('-helical_ensembles_set', choices=['full', 'minimal'], nargs='?', default='minimal',
+                        help='Choose the set of helical ensembles to be used: full - 64 ensembles,  minimal - 12 ensembles')
 
     parser.add_argument(
         '-improve_template', metavar='improve_template', help='Path to a template to improve - NMR, homolog'
