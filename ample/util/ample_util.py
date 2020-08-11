@@ -266,16 +266,13 @@ def filename_append(filename=None, astr=None, directory=None, separator="_"):
     return os.path.join(directory, name)
 
 
-def ideal_helices(optd, ensembles=False):
+def ideal_helices(optd):
     """Get some ideal helices
 
     Parameters
     ----------
     nresidues : int
        Number of residues to be used
-
-    ensembles : bool
-       If True then helical ensembles will be used instead of polyalanine ideal helices
 
     Returns
     -------
@@ -285,9 +282,16 @@ def ideal_helices(optd, ensembles=False):
     """
     nresidues = optd['fasta_length']
     include_dir = os.path.join(SHARE_DIR, 'include')
-    if not ensembles:
+    if not optd['helical_ensembles']:
         names = ['polyala_5', 'polyala_10', 'polyala_15', 'polyala_20', 'polyala_25', 'polyala_30', 'polyala_35',
                  'polyala_40']
+    elif optd['helical_ensembles_set'] == 'minimal':
+        names = ['ensemble_20_bfactor2_homogeneous', 'ensemble_20_bfactor3_homogeneous',
+                 'ensemble_15_bfactor2_homogeneous', 'ensemble_15_bfactor3_homogeneous',
+                 'ensemble_25_bfactor2_homogeneous', 'ensemble_25_bfactor3_homogeneous',
+                 'ensemble_30_bfactor2_homogeneous', 'ensemble_30_bfactor3_homogeneous',
+                 'ensemble_35_bfactor2_homogeneous', 'ensemble_35_bfactor3_homogeneous',
+                 'ensemble_40_bfactor2_homogeneous', 'ensemble_40_bfactor3_homogeneous']
     else:
         names = ['ensemble_20_bfactor2_homogeneous', 'ensemble_20_bfactor2_heterogeneous',
                  'ensemble_20_bfactor1_heterogeneous', 'ensemble_20_bfactor1_homogeneous',
@@ -295,34 +299,32 @@ def ideal_helices(optd, ensembles=False):
                  'ensemble_20_bfactor3_heterogeneous', 'ensemble_20_bfactor4_homogeneous',
                  'ensemble_15_bfactor2_heterogeneous', 'ensemble_15_bfactor2_homogeneous',
                  'ensemble_15_bfactor1_heterogeneous', 'ensemble_15_bfactor1_homogeneous',
-                 'ensemble_15_bfactor4_heterogeneous',
-                 'ensemble_15_bfactor3_heterogeneous', 'ensemble_15_bfactor4_homogeneous',
-                 'ensemble_15_bfactor3_homogeneous', 'ensemble_25_bfactor2_homogeneous',
-                 'ensemble_25_bfactor2_heterogeneous', 'ensemble_25_bfactor1_heterogeneous',
-                 'ensemble_25_bfactor1_homogeneous', 'ensemble_25_bfactor4_homogeneous',
-                 'ensemble_25_bfactor3_homogeneous', 'ensemble_25_bfactor4_heterogeneous',
-                 'ensemble_25_bfactor3_heterogeneous', 'ensemble_30_bfactor2_homogeneous',
-                 'ensemble_30_bfactor2_heterogeneous', 'ensemble_30_bfactor1_heterogeneous',
-                 'ensemble_30_bfactor1_homogeneous', 'ensemble_30_bfactor4_homogeneous',
-                 'ensemble_30_bfactor4_heterogeneous',
+                 'ensemble_15_bfactor4_heterogeneous', 'ensemble_15_bfactor3_heterogeneous',
+                 'ensemble_15_bfactor4_homogeneous', 'ensemble_15_bfactor3_homogeneous',
+                 'ensemble_25_bfactor2_homogeneous', 'ensemble_25_bfactor2_heterogeneous',
+                 'ensemble_25_bfactor1_heterogeneous', 'ensemble_25_bfactor1_homogeneous',
+                 'ensemble_25_bfactor4_homogeneous', 'ensemble_25_bfactor3_homogeneous',
+                 'ensemble_25_bfactor4_heterogeneous', 'ensemble_25_bfactor3_heterogeneous',
+                 'ensemble_30_bfactor2_homogeneous', 'ensemble_30_bfactor2_heterogeneous',
+                 'ensemble_30_bfactor1_heterogeneous', 'ensemble_30_bfactor1_homogeneous',
+                 'ensemble_30_bfactor4_homogeneous', 'ensemble_30_bfactor4_heterogeneous',
                  'ensemble_30_bfactor3_heterogeneous', 'ensemble_30_bfactor3_homogeneous',
                  'ensemble_35_bfactor2_homogeneous', 'ensemble_35_bfactor2_heterogeneous',
                  'ensemble_35_bfactor1_heterogeneous', 'ensemble_35_bfactor1_homogeneous',
-                 'ensemble_35_bfactor4_heterogeneous',
-                 'ensemble_35_bfactor4_homogeneous', 'ensemble_35_bfactor3_homogeneous',
-                 'ensemble_35_bfactor3_heterogeneous', 'ensemble_40_bfactor2_homogeneous',
-                 'ensemble_40_bfactor2_heterogeneous', 'ensemble_40_bfactor1_heterogeneous',
-                 'ensemble_40_bfactor1_homogeneous', 'ensemble_40_bfactor4_heterogeneous',
-                 'ensemble_40_bfactor3_heterogeneous', 'ensemble_40_bfactor4_homogeneous',
-                 'ensemble_40_bfactor3_homogeneous', 'ensemble_10_bfactor2_heterogeneous',
-                 'ensemble_10_bfactor2_homogeneous', 'ensemble_10_bfactor1_heterogeneous',
-                 'ensemble_10_bfactor1_homogeneous', 'ensemble_10_bfactor3_homogeneous',
-                 'ensemble_10_bfactor4_homogeneous', 'ensemble_10_bfactor3_heterogeneous',
-                 'ensemble_10_bfactor4_heterogeneous', 'ensemble_5_bfactor2_heterogeneous',
-                 'ensemble_5_bfactor2_homogeneous', 'ensemble_5_bfactor1_heterogeneous',
-                 'ensemble_5_bfactor1_homogeneous', 'ensemble_5_bfactor4_homogeneous',
-                 'ensemble_5_bfactor3_heterogeneous', 'ensemble_5_bfactor3_homogeneous',
-                 'ensemble_5_bfactor4_heterogeneous']
+                 'ensemble_35_bfactor4_heterogeneous', 'ensemble_35_bfactor4_homogeneous',
+                 'ensemble_35_bfactor3_homogeneous', 'ensemble_35_bfactor3_heterogeneous',
+                 'ensemble_40_bfactor2_homogeneous', 'ensemble_40_bfactor2_heterogeneous',
+                 'ensemble_40_bfactor1_heterogeneous', 'ensemble_40_bfactor1_homogeneous',
+                 'ensemble_40_bfactor4_heterogeneous', 'ensemble_40_bfactor3_heterogeneous',
+                 'ensemble_40_bfactor4_homogeneous', 'ensemble_40_bfactor3_homogeneous',
+                 'ensemble_10_bfactor2_heterogeneous', 'ensemble_10_bfactor2_homogeneous',
+                 'ensemble_10_bfactor1_heterogeneous', 'ensemble_10_bfactor1_homogeneous',
+                 'ensemble_10_bfactor3_homogeneous', 'ensemble_10_bfactor4_homogeneous',
+                 'ensemble_10_bfactor3_heterogeneous', 'ensemble_10_bfactor4_heterogeneous',
+                 'ensemble_5_bfactor2_heterogeneous', 'ensemble_5_bfactor2_homogeneous',
+                 'ensemble_5_bfactor1_heterogeneous', 'ensemble_5_bfactor1_homogeneous',
+                 'ensemble_5_bfactor4_homogeneous', 'ensemble_5_bfactor3_heterogeneous',
+                 'ensemble_5_bfactor3_homogeneous', 'ensemble_5_bfactor4_heterogeneous']
 
     ensemble_options = {}
     ensembles_data = []

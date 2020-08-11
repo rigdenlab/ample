@@ -159,15 +159,17 @@ def add_general_options(parser=None):
         action=BoolAction,
         nargs='?',
         metavar='True/False',
-        help='Use ideal polyalanine helices to solve structure (8 helices: from 5-40 residues)',
+        help='Attempt to solve the structure using ideal polyalanine helices (8 helices: from 5-40 residues)',
     )
     parser.add_argument(
         '-helical_ensembles',
         action=BoolAction,
         nargs='?',
         metavar='True/False',
-        help='Use helical ensembles to solve structure (64 ensembles)',
+        help='Attempt to solve the structure using helical ensembles (minimal set of 12 ensembles used by default)',
     )
+    parser.add_argument('-helical_ensembles_set', choices=['full', 'minimal'], nargs='?', default='minimal',
+                        help='Choose the set of helical ensembles to be used: full - 64 ensembles,  minimal - 12 ensembles')
 
     parser.add_argument(
         '-improve_template', metavar='improve_template', help='Path to a template to improve - NMR, homolog'
