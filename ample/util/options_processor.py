@@ -224,8 +224,6 @@ def process_options(optd):
         process_mr_options(optd)
     process_benchmark_options(optd)
 
-    if optd['submit_qtype']:
-        optd['submit_qtype'] = optd['submit_qtype'].upper()
     if optd['submit_cluster'] and not optd['submit_qtype']:
         raise RuntimeError(
             'Must use -submit_qtype argument to specify queueing system (e.g. QSUB, LSF ) if submitting to a cluster.'
@@ -414,12 +412,14 @@ def process_mr_options(optd):
     if optd['use_shelxe']:
         if optd['mtz_min_resolution'] > optd['shelxe_max_resolution']:
             logger.warn(
-                "Disabling use of SHELXE as min resolution of %f is < accepted limit of %f",
+                "Disabling use of SHELXE as min resolution of %f is > accepted limit of %f",
                 optd['mtz_min_resolution'],
                 optd['shelxe_max_resolution'],
             )
             optd['use_shelxe'] = False
             optd['shelxe_rebuild'] = False
+            optd['shelxe_rebuild_arpwarp'] = False
+            optd['shelxe_rebuild_buccaneer'] = False
     if optd['use_shelxe']:
         if not optd['shelxe_exe']:
             optd['shelxe_exe'] = os.path.join(os.environ['CCP4'], 'bin', 'shelxe' + ample_util.EXE_EXT)
