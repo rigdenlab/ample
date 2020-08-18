@@ -942,7 +942,7 @@ class RosettaModel(object):
                 environment=self.submit_pe,
                 run_time=job_time,
                 name=job_name,
-                nprocesses=self.nprocesses,
+                processes=self.nprocesses,
                 max_array_size=self.submit_max_array,
                 queue=self.submit_queue,
                 shell="/bin/bash",

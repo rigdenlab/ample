@@ -424,7 +424,7 @@ class Ample(object):
                 environment=optd['submit_pe'],
                 run_time=mrbump_util.MRBUMP_RUNTIME,
                 name="mrbump",
-                nprocesses=optd['nproc'],
+                processes=optd['nproc'],
                 max_array_size=optd['submit_max_array'],
                 queue=optd['submit_queue'],
                 shell="/bin/bash",
