@@ -977,6 +977,7 @@ class RosettaModel(object):
         self.sequence_length = optd['fasta_length']
         self.name = optd['name']
         self.nmodels = optd['nmodels']
+        self.nproc = optd['nproc']
 
         # Directories
         self.ample_dir = optd['work_dir']
