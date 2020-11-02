@@ -20,6 +20,7 @@ from ample.ensembler.constants import (
     RELIABLE,
     ALLATOM,
 )
+from ample.ensembler.truncation_util import TRUNCATION_METHODS
 from ample.modelling import rosetta_model
 from ample.util import ample_util, contact_util, exit_util, mrbump_util, mtz_util, sequence_util
 
@@ -64,10 +65,6 @@ def check_mandatory_options(optd):
         msg = "Only one of molrep_only or phaser_only is permitted"
         _exit(msg, optd['work_dir'])
 
-    if optd['single_model'] and not (optd['truncation_scorefile'] and optd['truncation_scorefile_header']):
-        msg = "Truncating a single model requires -truncation_scorefile and -truncation_scorefile_header"
-        _exit(msg, optd['work_dir'])
-
     return
 
 
@@ -92,11 +89,10 @@ def process_benchmark_options(optd):
 
 
 def process_ensemble_options(optd):
-    from ample.ensembler.truncation_util import TRUNCATION_METHODS
-
     if optd['single_model_mode'] and optd['truncation_scorefile'] and optd['truncation_scorefile_header']:
-        # optd['truncation_method'] = "scores"
         optd['truncation_method'] = TRUNCATION_METHODS.SCORES
+    elif optd['single_model_mode']:
+        optd['truncation_method'] = TRUNCATION_METHODS.BFACTORS
     elif optd['percent_fixed_intervals']:
         optd['truncation_method'] = TRUNCATION_METHODS.PERCENT_FIXED
     else:

@@ -4,6 +4,7 @@ __author__ = "Felix Simkovic, and Jens Thomas"
 __date__ = "16 Feb 2016"
 __version__ = "1.0"
 
+import gemmi
 import logging
 import os
 import pandas as pd
@@ -57,11 +58,6 @@ class SingleModelEnsembler(_ensembler.Ensembler):
             logger.critical(msg)
             raise RuntimeError(msg)
 
-        if len(truncation_scorefile_header) < 2:
-            msg = "At least two header options for scorefile are required"
-            logger.critical(msg)
-            raise RuntimeError(msg)
-
         # standardise the structure
         std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
@@ -79,30 +75,74 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         if not os.path.isdir(truncate_dir):
             os.mkdir(truncate_dir)
 
-        # Read all the scores into a per residue dictionary
-        assert len(truncation_scorefile_header) > 1, "At least two column labels are required"
-        residue_scores = self._read_scorefile(truncation_scorefile)
-        residue_key = truncation_scorefile_header.pop(0)
-        truncation_scorefile_header = map(str.strip, truncation_scorefile_header)
-        assert all(
-            h in residue_scores[0] for h in truncation_scorefile_header
-        ), "Not all column labels are in your CSV file"
-        self.ensembles = []
-        for score_key in truncation_scorefile_header:
+        if truncation_method == truncation_util.TRUNCATION_METHODS.SCORES:
+            if len(truncation_scorefile_header) < 2:
+                msg = "At least two header options for scorefile are required"
+                logger.critical(msg)
+                raise RuntimeError(msg)
+
+            # Read all the scores into a per residue dictionary
+            assert len(truncation_scorefile_header) > 1, "At least two column labels are required"
+            residue_scores = self._read_scorefile(truncation_scorefile)
+            residue_key = truncation_scorefile_header.pop(0)
+            truncation_scorefile_header = map(str.strip, truncation_scorefile_header)
+            assert all(
+                h in residue_scores[0] for h in truncation_scorefile_header
+            ), "Not all column labels are in your CSV file"
+            self.ensembles = []
+            for score_key in truncation_scorefile_header:
+                zipped_scores = self._generate_residue_scorelist(residue_key, score_key, residue_scores)
+                score_truncate_dir = os.path.join(truncate_dir, "{}".format(score_key))
+                if not os.path.isdir(score_truncate_dir):
+                    os.mkdir(score_truncate_dir)
+
+                self.truncator = truncation_util.Truncator(work_dir=score_truncate_dir)
+                self.truncator.theseus_exe = self.theseus_exe
+                for truncation in self.truncator.truncate_models(
+                    models=std_models,
+                    truncation_method=truncation_method,
+                    percent_truncation=percent_truncation,
+                    percent_fixed_intervals=percent_fixed_intervals,
+                    truncation_pruning=truncation_pruning,
+                    residue_scores=zipped_scores,
+                ):
+
+                    pre_ensemble = _ensembler.Ensemble()
+                    pre_ensemble.num_residues = truncation.num_residues
+                    pre_ensemble.truncation_dir = truncation.directory
+                    pre_ensemble.truncation_level = truncation.level
+                    pre_ensemble.truncation_method = truncation.method
+                    pre_ensemble.truncation_percent = truncation.percent
+                    pre_ensemble.truncation_residues = truncation.residues
+                    pre_ensemble.truncation_variance = truncation.variances
+                    pre_ensemble.truncation_score_key = score_key.lower()
+                    pre_ensemble.pdb = truncation.models[0]
+
+                    for ensemble in self.edit_side_chains(pre_ensemble, side_chain_treatments, single_structure=True):
+                        self.ensembles.append(ensemble)
+
+        if truncation_method == truncation_util.TRUNCATION_METHODS.BFACTORS:
+            struct = gemmi.read_structure(models[0])
+            residue_scores = []
+            residue_key = "Residue"
+            score_key = "Bfactor"
+            for chain in struct[0]:
+                for residue in chain:
+                    residue_scores.append({residue_key: residue.seqid.num, score_key: residue[0].b_iso})
             zipped_scores = self._generate_residue_scorelist(residue_key, score_key, residue_scores)
             score_truncate_dir = os.path.join(truncate_dir, "{}".format(score_key))
             if not os.path.isdir(score_truncate_dir):
                 os.mkdir(score_truncate_dir)
-
+            self.ensembles = []
             self.truncator = truncation_util.Truncator(work_dir=score_truncate_dir)
             self.truncator.theseus_exe = self.theseus_exe
             for truncation in self.truncator.truncate_models(
-                models=std_models,
-                truncation_method=truncation_method,
-                percent_truncation=percent_truncation,
-                percent_fixed_intervals=percent_fixed_intervals,
-                truncation_pruning=truncation_pruning,
-                residue_scores=zipped_scores,
+                    models=std_models,
+                    truncation_method=truncation_method,
+                    percent_truncation=percent_truncation,
+                    percent_fixed_intervals=percent_fixed_intervals,
+                    truncation_pruning=truncation_pruning,
+                    residue_scores=zipped_scores,
             ):
 
                 pre_ensemble = _ensembler.Ensemble()

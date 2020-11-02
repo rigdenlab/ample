@@ -46,7 +46,6 @@ def add_core_options(parser=None):
     parser.add_argument(
         '-nproc',
         type=int,
-        default=1,
         help="Number of processors [1]. For local, serial runs the jobs will be split across nproc processors. For cluster submission, this should be the number of processors on a node.",
     )
     parser.add_argument(
