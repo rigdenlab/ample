@@ -405,6 +405,7 @@ class Truncator(object):
             for infile in self.models:
                 pdbout = ample_util.filename_append(infile, str(truncation.level), directory=truncation.directory)
                 # Loop through PDB files and create new ones that only contain the residues left after truncation
+                logger.debug(truncation.residues_idxs)
                 pdb_edit.select_residues(pdbin=infile, pdbout=pdbout, tokeep_idx=truncation.residues_idxs)
                 truncation.models.append(pdbout)
         self.truncations = truncations

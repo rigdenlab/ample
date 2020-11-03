@@ -63,8 +63,10 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         os.mkdir(std_models_dir)
 
         std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
+        ren_model = ample_util.filename_append(models[0], 'std_ren', std_models_dir)
         pdb_edit.standardise(pdbin=models[0], pdbout=std_model, del_hetatm=True)
-        std_models = [std_model]
+        pdb_edit.renumber_residues(pdbin=std_model, pdbout=ren_model, start=1)
+        std_models = [ren_model]
         logger.info('Standardised input model: %s', std_models[0])
 
         # Create final ensembles directory
