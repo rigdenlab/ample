@@ -62,11 +62,11 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
 
+        ren_model = ample_util.filename_append(models[0], 'ren', std_models_dir)
         std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
-        ren_model = ample_util.filename_append(models[0], 'std_ren', std_models_dir)
-        pdb_edit.standardise(pdbin=models[0], pdbout=std_model, del_hetatm=True)
-        pdb_edit.renumber_residues(pdbin=std_model, pdbout=ren_model, start=1)
-        std_models = [ren_model]
+        pdb_edit.renumber_residues(pdbin=models[0], pdbout=ren_model, start=1)
+        pdb_edit.standardise(pdbin=ren_model, pdbout=std_model, del_hetatm=True)
+        std_models = [std_model]
         logger.info('Standardised input model: %s', std_models[0])
 
         # Create final ensembles directory
@@ -124,7 +124,7 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                         self.ensembles.append(ensemble)
 
         if truncation_method == truncation_util.TRUNCATION_METHODS.BFACTORS:
-            struct = gemmi.read_structure(models[0])
+            struct = gemmi.read_structure(std_model)
             residue_scores = []
             residue_key = "Residue"
             score_key = "Bfactor"
