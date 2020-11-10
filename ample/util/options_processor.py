@@ -92,7 +92,10 @@ def process_ensemble_options(optd):
     if optd['single_model_mode'] and optd['truncation_scorefile'] and optd['truncation_scorefile_header']:
         optd['truncation_method'] = TRUNCATION_METHODS.SCORES
     elif optd['single_model_mode']:
-        optd['truncation_method'] = TRUNCATION_METHODS.BFACTORS
+        if not optd['truncation_method']:
+            optd['truncation_method'] = TRUNCATION_METHODS.BFACTORS
+        else:
+            optd['truncation_method'] = TRUNCATION_METHODS(optd['truncation_method'])
     elif optd['percent_fixed_intervals']:
         optd['truncation_method'] = TRUNCATION_METHODS.PERCENT_FIXED
     else:

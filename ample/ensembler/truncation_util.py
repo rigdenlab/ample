@@ -23,6 +23,7 @@ class TRUNCATION_METHODS(Enum):
     PERCENT_FIXED = 'percent_fixed_intervals'
     SCORES = 'scores'
     BFACTORS = 'bfactors'
+    ERRORS = 'errors'
 
 
 # Data structure to store residue information
@@ -285,7 +286,7 @@ class Truncator(object):
 
         self.models = models
         # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
-        if truncation_method not in [TRUNCATION_METHODS.SCORES, TRUNCATION_METHODS.BFACTORS]:
+        if truncation_method not in [TRUNCATION_METHODS.SCORES, TRUNCATION_METHODS.BFACTORS, TRUNCATION_METHODS.ERRORS]:
             run_theseus = theseus.Theseus(work_dir=self.work_dir, theseus_exe=self.theseus_exe)
             try:
                 run_theseus.superpose_models(self.models, homologs=homologs, alignment_file=alignment_file)
@@ -310,7 +311,7 @@ class Truncator(object):
                 logger.critical(e)
                 return []
 
-        if truncation_method in [TRUNCATION_METHODS.SCORES, TRUNCATION_METHODS.BFACTORS]:
+        if truncation_method in [TRUNCATION_METHODS.SCORES, TRUNCATION_METHODS.BFACTORS, TRUNCATION_METHODS.ERRORS]:
             var_by_res = self._convert_residue_scores(residue_scores)
         else:
             var_by_res = run_theseus.var_by_res
@@ -324,6 +325,7 @@ class Truncator(object):
             TRUNCATION_METHODS.PERCENT_FIXED,
             TRUNCATION_METHODS.SCORES,
             TRUNCATION_METHODS.BFACTORS,
+            TRUNCATION_METHODS.ERRORS,
         ]:
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_by_percent(
                 var_by_res, percent_truncation=percent_truncation, percent_fixed_intervals=percent_fixed_intervals

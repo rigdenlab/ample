@@ -6,6 +6,7 @@ __version__ = "1.0"
 
 import gemmi
 import logging
+import math
 import os
 import pandas as pd
 
@@ -62,12 +63,14 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         std_models_dir = os.path.join(self.work_dir, "std_models")
         os.mkdir(std_models_dir)
 
-        ren_model = ample_util.filename_append(models[0], 'ren', std_models_dir)
         std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
-        pdb_edit.renumber_residues(pdbin=models[0], pdbout=ren_model, start=1)
-        pdb_edit.standardise(pdbin=ren_model, pdbout=std_model, del_hetatm=True)
+        pdb_edit.standardise(pdbin=models[0], pdbout=std_model)
+        if truncation_method == truncation_util.TRUNCATION_METHODS.ERRORS:
+            self._modify_bfactors(std_model, std_model)
+
         std_models = [std_model]
         logger.info('Standardised input model: %s', std_models[0])
+
 
         # Create final ensembles directory
         if not os.path.isdir(self.ensembles_directory):
@@ -123,7 +126,7 @@ class SingleModelEnsembler(_ensembler.Ensembler):
                     for ensemble in self.edit_side_chains(pre_ensemble, side_chain_treatments, single_structure=True):
                         self.ensembles.append(ensemble)
 
-        if truncation_method == truncation_util.TRUNCATION_METHODS.BFACTORS:
+        if truncation_method in [truncation_util.TRUNCATION_METHODS.BFACTORS, truncation_util.TRUNCATION_METHODS.ERRORS]:
             struct = gemmi.read_structure(std_model)
             residue_scores = []
             residue_key = "Residue"
@@ -176,6 +179,29 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         }
         kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
         return self.generate_ensembles(models, **kwargs)
+
+    @staticmethod
+    def _modify_bfactors(pdbin, pdbout):
+        """Modify error estimates to B-factors"""
+        multiplier = 8.0 / 3.0 * math.pi ** 2
+        bmax = 999.0
+        rms_max = math.sqrt(bmax / multiplier)
+        rms_big = 4.0
+
+        struct = gemmi.read_structure(pdbin)
+        for model in struct:
+            for chain in model:
+                for residue in chain:
+                    for atom in residue:
+                        occ = max(min(1.0 - (atom.b_iso - rms_big) / (rms_max - rms_big), 1.0), 0.0)
+                        bfac = min(multiplier * atom.b_iso ** 2, bmax)
+                        atom.occ = occ
+                        atom.b_iso = bfac
+
+        pdb_string = [line for line in struct.make_minimal_pdb().split('\n') if not line.startswith('ANISOU')]
+        with open(pdbout, "w") as f_out:
+            for line in pdb_string:
+                f_out.write(line + os.linesep)
 
     @staticmethod
     def _generate_residue_scorelist(residue_key, score_key, scores):
