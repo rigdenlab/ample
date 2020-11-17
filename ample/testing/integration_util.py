@@ -163,7 +163,7 @@ class AMPLEIntegrationFramework(object):
                     collector,
                     environment=kwargs['submit_pe'],
                     name='test',
-                    nprocesses=nprocesses,
+                    processes=nprocesses,
                     max_array_size=kwargs['submit_max_array'],
                     queue=kwargs['submit_queue'],
                     shell="/bin/bash",
