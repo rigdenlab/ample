@@ -9,7 +9,7 @@ Currently an online websever to run AMPLE is available through CCP4 online:
 
    <br>
    <div>
-       <a target="_blank" href="https://www.ccp4.ac.uk/ccp4online/" class="btn btn-primary btn-lg">Go to CCP4 Online Server</a>
+       <a target="_blank" href="https://ccp4online.ccp4.ac.uk/ccp4online/" class="btn btn-primary btn-lg">Go to CCP4 Online Server</a>
    </div>
    </br>
 
