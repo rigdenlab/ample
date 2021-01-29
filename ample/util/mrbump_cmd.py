@@ -59,10 +59,15 @@ def keyword_dict(ensemble_pdb, name, amoptd, extra_options={}):
     ]
 
     # Pull out all mrbump options from the main ample dict
-    key_dict = dict((k, v) for k, v in amoptd.iteritems() if k in keywords)
+    if sys.version_info.major == 3:
+        key_dict = dict((k, v) for k, v in amoptd.items() if k in keywords)
+        extra_options_d = extra_options.items()
+    else:
+        key_dict = dict((k, v) for k, v in amoptd.iteritems() if k in keywords)
+        extra_options_d = extra_options.iteritems()
 
     # Change any/add options for this ensemble
-    for k, v in extra_options.iteritems():
+    for k, v in extra_options_d:
         key_dict[k] = v
 
     # Add ensemble_pdb and name

@@ -2,6 +2,8 @@
 
 import locale
 import sys
+import six
+
 
 # Below causes issues in some locales and noone knows why it was included so commenting out for now
 # locale.setlocale(locale.LC_NUMERIC, "")
@@ -21,7 +23,7 @@ class Table:
                 return locale.format("%.*f", (0, inum), True)
 
         except (ValueError, TypeError):
-            return num.encode('utf-8') if isinstance(num, unicode) else str(num)
+            return str(num.encode('utf-8')) if isinstance(num, six.string_types) else str(num)
 
     def get_max_width(self, table, index):
         """Get the maximum width of the given column index"""

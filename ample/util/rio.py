@@ -10,6 +10,7 @@ parse ncont file to generate map & analyse whether placed bits match and what ty
 
 """
 
+import functools
 from operator import itemgetter
 import os
 import types
@@ -315,9 +316,13 @@ class Rio(object):
             #
             # Find the biggest
             #
+
+            def get_diff(x, y):
+                return abs(x['stopResSeq'] - x['startResSeq']) - abs(y['stopResSeq'] - y['startResSeq'])
+
             biggest = sorted(
                 extended,
-                lambda x, y: abs(x['stopResSeq'] - x['startResSeq']) - abs(y['stopResSeq'] - y['startResSeq']),
+                key=functools.cmp_to_key(get_diff),
                 reverse=True,
             )[0]
 

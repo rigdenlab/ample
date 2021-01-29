@@ -26,7 +26,7 @@ class Test_1(unittest.TestCase):
         clusterer.generate_distance_matrix(pdb_list)
         cluster_files1 = [os.path.basename(x) for x in clusterer.cluster_by_radius(radius)]
         ref = ['1_S_00000002.pdb', '1_S_00000004.pdb']
-        self.assertItemsEqual(ref, cluster_files1)
+        self.assertEqual(ref, cluster_files1)
 
     @unittest.skipUnless(test_funcs.found_exe("gesamt" + ample_util.EXE_EXT), "gesamt exec missing")
     def test_gesamt_matrix_generic(self):

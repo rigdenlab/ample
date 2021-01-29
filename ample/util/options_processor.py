@@ -391,7 +391,7 @@ def process_mr_options(optd):
 
     # Disable all rebuilding if the resolution is too poor
     if optd['mtz_min_resolution'] >= mrbump_util.REBUILD_MAX_PERMITTED_RESOLUTION:
-        logger.warn(
+        logger.warning(
             "!!! Disabling all rebuilding as maximum resolution of %f is too poor!!!".format(optd['mtz_min_resolution'])
         )
         optd['use_shelxe'] = False
@@ -401,7 +401,7 @@ def process_mr_options(optd):
         optd['refine_rebuild_arpwarp'] = False
         optd['refine_rebuild_buccaneer'] = False
 
-    if optd['shelxe_max_resolution'] < 0.0:
+    if float(optd['shelxe_max_resolution']) < 0.0:
         if optd['coiled_coil']:
             optd['shelxe_max_resolution'] = mrbump_util.SHELXE_MAX_PERMITTED_RESOLUTION_CC
         else:
@@ -409,8 +409,8 @@ def process_mr_options(optd):
     
     # We use shelxe by default so if we can't find it we just warn and set use_shelxe to False
     if optd['use_shelxe']:
-        if optd['mtz_min_resolution'] > optd['shelxe_max_resolution']:
-            logger.warn(
+        if float(optd['mtz_min_resolution']) > float(optd['shelxe_max_resolution']):
+            logger.warning(
                 "Disabling use of SHELXE as min resolution of %f is > accepted limit of %f",
                 optd['mtz_min_resolution'],
                 optd['shelxe_max_resolution'],
@@ -430,7 +430,7 @@ def process_mr_options(optd):
     http://shelx.uni-ac.gwdg.de/SHELX/
     and install it in your PATH so that AMPLE can use it.
     """
-            logger.warn(msg)
+            logger.warning(msg)
             optd['use_shelxe'] = False
     if optd['shelxe_rebuild']:
         optd['shelxe_rebuild_arpwarp'] = True

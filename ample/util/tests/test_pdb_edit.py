@@ -1746,7 +1746,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
             if start is None:
                 start = int(residue_group.resseq)
                 continue
-            self.assertGreater(residue_group.resseq, idx + start, "Residue numbers dont' increase through chain")
+            self.assertGreaterEqual(int(residue_group.resseq), idx + start, "Residue numbers dont' increase through chain")
 
     def test_translate_1(self):
         ftranslate = [1, 2, -1]
@@ -3110,7 +3110,7 @@ ANISOU   26  CD1BILE A   3     4035   3461   2132   1269   -829   -356       C
             ),
         ]
 
-        for idx in xrange(len(ref_data_start)):  # Stuff that needs to be true
+        for idx in range(len(ref_data_start)):  # Stuff that needs to be true
             self.assertEqual(ref_data_start[idx][0], xyz_lst[idx][0])
             self.assertSequenceEqual(ref_data_start[idx][1], xyz_lst[idx][1])
         nr_atoms = sum(len(i[1]) for i in xyz_lst)

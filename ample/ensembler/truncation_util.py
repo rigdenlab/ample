@@ -6,6 +6,7 @@ __version__ = "1.0"
 import collections
 from enum import Enum
 import logging
+from numpy import around
 import os
 import sys
 
@@ -56,7 +57,7 @@ def calculate_residues_focussed(var_by_res):
     upper_start = [i + llen for i in _split_sequence(ulen, 10)]
     start_indexes = upper_start + lower_start
     # Calculate the percentages for each of these start points
-    percentages = [int(round(float(start + 1) / float(length) * 100)) for start in start_indexes]
+    percentages = [int(around(float(start + 1) / float(length) * 100)) for start in start_indexes]
     truncation_levels = percentages
     idxs_all = [x.idx for x in var_by_res]
     resseq_all = [x.resSeq for x in var_by_res]
@@ -123,7 +124,7 @@ def calculate_residues_by_percent(var_by_res, percent_truncation=None, percent_f
     truncation_residues = []
     truncation_residue_idxs = []
     for start in start_idxs:
-        percent = int(round(float(start + 1) / float(length) * 100))
+        percent = int(around(float(start + 1) / float(length) * 100))
         if percent in truncation_levels:
             continue
         residues = all_resseq[: start + 1]
@@ -157,7 +158,7 @@ def prune_residues(residues, chunk_size=1, allowed_gap=2):
     last_chunk_end = residues[0] - (allowed_gap + 1)  # make sure starting gap is bigger than allowed
 
     idxLast = lenr - 1
-    for i in xrange(1, idxLast + 1):
+    for i in range(1, idxLast + 1):
         this_residue = residues[i]
 
         if i == idxLast or this_residue != last + 1:
@@ -201,7 +202,7 @@ def _split_sequence(length, percent_interval, min_chunk=3):
     if length <= min_chunk:
         return [length - 1]
     # How many residues should fit in each bin?
-    chunk_size = int(round(float(length) * float(percent_interval) / 100.0))
+    chunk_size = int(around(float(length) * float(percent_interval) / 100.0))
     if chunk_size <= 0:
         return [length - 1]
     idxs = [length - 1]

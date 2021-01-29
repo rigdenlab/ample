@@ -26,18 +26,18 @@ class Test(unittest.TestCase):
         cls.theseus_exe = ample_util.find_exe('theseus' + ample_util.EXE_EXT)
 
     def test_convert_residue_scores(self):
-        residue_scores = [(i, 0.1 * i) for i in xrange(1, 11)]
+        residue_scores = [(i, 0.1 * i) for i in range(1, 11)]
         # ensembler = _ensembler.Ensembler()
         # scores = ensembler._convert_residue_scores(residue_scores)
         scores = truncation_util.Truncator._convert_residue_scores(residue_scores)
         score_idxs = [i.idx for i in scores]
-        ref_score_idxs = [i for i in xrange(10)]  # Minus one compared to org data
+        ref_score_idxs = [i for i in range(10)]  # Minus one compared to org data
         self.assertEqual(ref_score_idxs, score_idxs)
         score_resSeq = [i.resSeq for i in scores]
-        ref_score_resSeq = [i for i in xrange(1, 11)]  # Same i as org data
+        ref_score_resSeq = [i for i in range(1, 11)]  # Same i as org data
         self.assertEqual(ref_score_resSeq, score_resSeq)
         score_variances = [i.variance for i in scores]
-        ref_score_variances = [(0.1 * i) for i in xrange(1, 11)]  # Same i as org data
+        ref_score_variances = [(0.1 * i) for i in range(1, 11)]  # Same i as org data
         self.assertEqual(ref_score_variances, score_variances)
 
     def test_residuesFocussed(self):
@@ -47,7 +47,7 @@ class Test(unittest.TestCase):
             for i in range(l)
         ]
 
-        ref_tlevels = [100, 93, 85, 78, 70, 63, 55, 48, 40, 33, 25, 23, 20, 18, 15, 13, 10, 8, 5, 3]
+        ref_tlevels = [100, 92, 85, 78, 70, 62, 55, 48, 40, 32, 25, 22, 20, 18, 15, 12, 10, 8, 5, 2]
         ref_tvariances = [
             160.0,
             148.0,

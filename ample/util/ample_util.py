@@ -538,7 +538,7 @@ def save_amoptd(amoptd):
 
     """
     # Save results
-    with open(amoptd['results_path'], 'w') as f:
+    with open(amoptd['results_path'], 'wb') as f:
         pickle.dump(amoptd, f)
         logger.info("Saved state as file: %s\n", amoptd['results_path'])
 

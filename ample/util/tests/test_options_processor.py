@@ -80,7 +80,7 @@ class Test(unittest.TestCase):
         
         options.d['use_shelxe'] = True
         options.d['shelxe_rebuild'] = True
-        options.d['mtz_min_resolution'] = random.uniform(limit, REBUILD_MAX_PERMITTED_RESOLUTION)
+        options.d['mtz_min_resolution'] = random.uniform(SHELXE_MAX_PERMITTED_RESOLUTION_CC, limit)
         options_processor.process_mr_options(options.d)
         
         self.assertTrue(options.d['use_shelxe'])

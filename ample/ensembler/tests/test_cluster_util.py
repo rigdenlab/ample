@@ -7,7 +7,7 @@ from ample.ensembler import cluster_util
 
 class Test(unittest.TestCase):
     def test_random_cluster(self):
-        models = ["{0}foo{0}bar{0}model_{1}.pdb".format(os.sep, i) for i in xrange(1000)]
+        models = ["{0}foo{0}bar{0}model_{1}.pdb".format(os.sep, i) for i in range(1000)]
         ########################################################################
         # Test Case 1
         max_cluster_size = 200

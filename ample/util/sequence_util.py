@@ -106,7 +106,7 @@ class Sequence(object):
         if len(seqd) > 1:
             raise RuntimeError("Currently only support adding data for single chain pdbs")
 
-        chain = seqd.keys()[0]
+        chain = list(seqd.keys())[0]
 
         self.pdbs[idx] = fname
         self.chains[idx] = chain
