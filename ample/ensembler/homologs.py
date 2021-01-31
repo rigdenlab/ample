@@ -66,7 +66,7 @@ def align_gesamt(models, gesamt_exe=None, work_dir=None):
         if len(seqd) != 1:
             msg = "Model {0} does not contain a single chain, got: {1}".format(*seqd.keys())
             raise RuntimeError(msg)
-        model2chain[m] = seqd.keys()[0]
+        model2chain[m] = list(seqd.keys())[0]
 
     basename = 'gesamt'
     logfile = os.path.join(work_dir, 'gesamt.log')
@@ -229,5 +229,8 @@ class HomologEnsembler(_ensembler.Ensembler):
             'homolog_aligner': amoptd['homolog_aligner'],
         }
         # strip out any that are None
-        kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
+        if sys.version_info.major == 3:
+            kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        else:
+            kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
         return self.generate_ensembles(models, **kwargs)

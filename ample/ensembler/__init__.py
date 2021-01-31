@@ -516,7 +516,7 @@ def _sweet_spotting(ensembles_zipped_ordered, keys):
 
     def magic(key, data):
         """Magic binning happening here"""
-        container = {k[key]: [] for k in zip(*data)[1]}
+        container = {k[key]: [] for k in list(zip(*data))[1]}
         for e in data:
             container[e[1][key]].append(e)
         mulleimer = []

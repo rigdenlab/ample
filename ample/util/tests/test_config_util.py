@@ -32,7 +32,7 @@ class Test(unittest.TestCase):
             'shelxe_rebuild': True,
             'shelxe_rebuild_arpwarp': False,
             'shelxe_rebuild_buccaneer': False,
-            'classic_mode': False,
+            'classic_mode': True,
             'devel_mode': False,
             'quick_mode': False,
             'thin_clusters': False,
@@ -42,20 +42,24 @@ class Test(unittest.TestCase):
             'ample_version': version.__version__,
             'fasta': os.path.join(os.getcwd(), 'foo'),
             'rcdir': os.path.join(os.sep, 'foo', 'bar'),
-            'side_chain_treatments': ['polyAla', 'reliable', 'allatom'],
+            'side_chain_treatments': ['polyala', 'reliable', 'allatom'],
+            'percent': 5,
+            'num_clusters': 1,
+            'subcluster_radius_thresholds': [1, 2, 3],
             'nproc': 1,
             'submit_qtype': False,
             'shelxe_rebuild': True,
-            'shelxe_rebuild_arpwarp': True,
-            'shelxe_rebuild_buccaneer': True,
-            'classic_mode': False,
+            'shelxe_rebuild_arpwarp': False,
+            'shelxe_rebuild_buccaneer': False,
+            'classic_mode': True,
             'devel_mode': False,
             'quick_mode': False,
             'thin_clusters': False,
             'webserver_uri': False,
         }
+
         options._process_options()
-        self.assertItemsEqual(options.d, expected)
+        self.assertDictEqual(options.d, expected)
 
     def test_preset_options_quick_mode(self):
         options = config_util.AMPLEConfigOptions()
@@ -204,7 +208,7 @@ class Test(unittest.TestCase):
             'score_matrix': True,
         }
 
-        self.assertItemsEqual(options.d, expected)
+        self.assertEqual(options.d, expected)
 
     def test_roundtrip_config_file(self):
         """Test we can read in and write out a config file with no changes"""
@@ -266,7 +270,7 @@ ensemble_options = None
         with open(f2.name) as f2:
             output_str = f2.read()
 
-        self.assertItemsEqual(output_str, input_str)
+        self.assertEqual(output_str, input_str)
         os.unlink(f1.name)
         os.unlink(f2.name)
 
@@ -321,7 +325,7 @@ ensemble_options = None
         }
 
         options._read_cmdline_opts(config_opts)
-        self.assertItemsEqual(options.d, expected)
+        self.assertDictEqual(options.d, expected)
 
     def test_isfloat(self):
         # Test the _isfloat function

@@ -17,5 +17,5 @@ if __name__ == '__main__':
     try:
         main.Ample().main()
     except Exception as e:
-        msg = "Error running main AMPLE program: {0}".format(e.message)
+        msg = "Error running main AMPLE program: {0}".format(e)
         exit_util.exit_error(msg, sys.exc_info()[2])

@@ -562,7 +562,7 @@ class AmpleOutput(object):
         for i in range(len(tdata[0])):  # Skip name as it's the row header
             h = tdata[0][i]
             tt = tooltips[h] if h in tooltips else ""
-            pyrvapi.rvapi_put_horz_theader(table_id, h.encode('utf-8'), tt, i)  # Add table data
+            pyrvapi.rvapi_put_horz_theader(table_id, str(h), tt, i)  # Add table data
         for i in range(1, len(tdata)):
             for j in range(len(tdata[i])):
                 pyrvapi.rvapi_put_table_string(table_id, str(tdata[i][j]), i - 1, j)

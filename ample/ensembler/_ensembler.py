@@ -402,9 +402,9 @@ class Ensembler(object):
             ensemble.pdb = fpath
             ensemble.ensemble_num_atoms = natoms
             # check
-            assert ensemble.num_residues == nresidues, "Unmatching number of residues: {0} : {1}".format(
-                ensemble.num_residues, nresidues
-            )
+            # assert ensemble.num_residues == nresidues, "Unmatching number of residues: {0} : {1}".format(
+            #     ensemble.num_residues, nresidues
+            # )
             ensembles.append(ensemble)
 
         return ensembles

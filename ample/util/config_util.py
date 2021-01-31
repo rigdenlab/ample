@@ -6,6 +6,7 @@
 import logging
 import multiprocessing
 import os
+import sys
 import traceback
 
 from ample.constants import AMPLE_CONFIG_FILE
@@ -222,7 +223,11 @@ class AMPLEConfigOptions(object):
         if "rcdir" in self.d and not self.d["rcdir"]:
             self.d["rcdir"] = os.path.join(os.path.expanduser("~"), ".ample")
         # Set full file paths
-        for k, v in self.d.iteritems():
+        if sys.version_info.major == 3:
+            d_items = self.d.items()
+        else:
+            d_items = self.d.iteritems()
+        for k, v in d_items:
             if k in _SECTIONS_REFERENCE["Files"] and v:
                 self.d[k] = os.path.abspath(v)
 
@@ -249,7 +254,11 @@ class AMPLEConfigOptions(object):
     def _preset_options(self, mode):
         assert hasattr(self, mode), "Unknown mode: {0}".format(mode)
         logger.info("Using preset mode: {0}".format(mode))
-        for k, v in getattr(self, mode).iteritems():
+        if sys.version_info.major == 3:
+            d_items = getattr(self, mode).items()
+        else:
+            d_items = getattr(self, mode).iteritems()
+        for k, v in d_items:
             if 'cmdline_flags' in self.d and k in self.d['cmdline_flags']:
                 if self.d[k] == v:
                     msg = 'WARNING! {0} flag {1} => {2} was duplicated on the command line!'.format(mode, v, k)
@@ -307,7 +316,11 @@ class AMPLEConfigOptions(object):
     def _read_cmdline_opts(self, cmdline_opts):
         tmpv = None
         cmdline_flags = []
-        for k, v in cmdline_opts.iteritems():
+        if sys.version_info.major == 3:
+            d_items = cmdline_opts.items()
+        else:
+            d_items = cmdline_opts.iteritems()
+        for k, v in d_items:
             if v is not None:
                 cmdline_flags.append(k)
             if k not in self.d:
@@ -315,7 +328,7 @@ class AMPLEConfigOptions(object):
             elif v != None:
                 logger.debug("Cmdline changing {0}: {1} => {2}".format(k, self.d[k], v))
                 self.d[k] = v
-        self.d['cmdline_flags'] = cmdline_flags
+        self.d['cmdline_flags'] = sorted(cmdline_flags)
         return
 
     def _isfloat(self, value):

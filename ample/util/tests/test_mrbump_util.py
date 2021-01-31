@@ -2,6 +2,7 @@
 
 import pickle
 import os
+import sys
 import unittest
 
 from ample.constants import AMPLE_PKL, SHARE_DIR
@@ -19,8 +20,11 @@ class Test(unittest.TestCase):
         pkl = os.path.join(self.testfiles_dir, AMPLE_PKL)
         if not os.path.isfile(pkl):
             return
-        with open(pkl) as f:
-            d = pickle.load(f)
+        with open(pkl, 'rb') as f:
+            if sys.version_info.major == 3:
+                d = pickle.load(f, encoding='latin1')
+            else:
+                d = pickle.load(f)
         summary = mrbump_util.finalSummary(d)
         self.assertIsNotNone(summary)
 

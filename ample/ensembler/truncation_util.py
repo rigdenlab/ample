@@ -6,6 +6,7 @@ __version__ = "1.0"
 import collections
 from enum import Enum
 import logging
+from numpy import around
 import os
 import sys
 
@@ -22,6 +23,8 @@ class TRUNCATION_METHODS(Enum):
     PERCENT = 'percent'
     PERCENT_FIXED = 'percent_fixed_intervals'
     SCORES = 'scores'
+    BFACTORS = 'bfactors'
+    ERRORS = 'errors'
 
 
 # Data structure to store residue information
@@ -54,7 +57,7 @@ def calculate_residues_focussed(var_by_res):
     upper_start = [i + llen for i in _split_sequence(ulen, 10)]
     start_indexes = upper_start + lower_start
     # Calculate the percentages for each of these start points
-    percentages = [int(round(float(start + 1) / float(length) * 100)) for start in start_indexes]
+    percentages = [int(around(float(start + 1) / float(length) * 100)) for start in start_indexes]
     truncation_levels = percentages
     idxs_all = [x.idx for x in var_by_res]
     resseq_all = [x.resSeq for x in var_by_res]
@@ -121,7 +124,7 @@ def calculate_residues_by_percent(var_by_res, percent_truncation=None, percent_f
     truncation_residues = []
     truncation_residue_idxs = []
     for start in start_idxs:
-        percent = int(round(float(start + 1) / float(length) * 100))
+        percent = int(around(float(start + 1) / float(length) * 100))
         if percent in truncation_levels:
             continue
         residues = all_resseq[: start + 1]
@@ -155,7 +158,7 @@ def prune_residues(residues, chunk_size=1, allowed_gap=2):
     last_chunk_end = residues[0] - (allowed_gap + 1)  # make sure starting gap is bigger than allowed
 
     idxLast = lenr - 1
-    for i in xrange(1, idxLast + 1):
+    for i in range(1, idxLast + 1):
         this_residue = residues[i]
 
         if i == idxLast or this_residue != last + 1:
@@ -199,7 +202,7 @@ def _split_sequence(length, percent_interval, min_chunk=3):
     if length <= min_chunk:
         return [length - 1]
     # How many residues should fit in each bin?
-    chunk_size = int(round(float(length) * float(percent_interval) / 100.0))
+    chunk_size = int(around(float(length) * float(percent_interval) / 100.0))
     if chunk_size <= 0:
         return [length - 1]
     idxs = [length - 1]
@@ -284,7 +287,7 @@ class Truncator(object):
 
         self.models = models
         # Calculate variances between pdb and align them (we currently only require the aligned models for homologs)
-        if truncation_method != TRUNCATION_METHODS.SCORES:
+        if truncation_method not in [TRUNCATION_METHODS.SCORES, TRUNCATION_METHODS.BFACTORS, TRUNCATION_METHODS.ERRORS]:
             run_theseus = theseus.Theseus(work_dir=self.work_dir, theseus_exe=self.theseus_exe)
             try:
                 run_theseus.superpose_models(self.models, homologs=homologs, alignment_file=alignment_file)
@@ -309,7 +312,7 @@ class Truncator(object):
                 logger.critical(e)
                 return []
 
-        if truncation_method == TRUNCATION_METHODS.SCORES:
+        if truncation_method in [TRUNCATION_METHODS.SCORES, TRUNCATION_METHODS.BFACTORS, TRUNCATION_METHODS.ERRORS]:
             var_by_res = self._convert_residue_scores(residue_scores)
         else:
             var_by_res = run_theseus.var_by_res
@@ -322,6 +325,8 @@ class Truncator(object):
             TRUNCATION_METHODS.PERCENT,
             TRUNCATION_METHODS.PERCENT_FIXED,
             TRUNCATION_METHODS.SCORES,
+            TRUNCATION_METHODS.BFACTORS,
+            TRUNCATION_METHODS.ERRORS,
         ]:
             truncation_levels, truncation_variances, truncation_residues, truncation_residue_idxs = calculate_residues_by_percent(
                 var_by_res, percent_truncation=percent_truncation, percent_fixed_intervals=percent_fixed_intervals

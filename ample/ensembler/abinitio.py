@@ -7,6 +7,7 @@ __version__ = "1.0"
 import logging
 import os
 import shutil
+import sys
 
 from ample.ensembler import _ensembler
 from ample.ensembler import cluster_util
@@ -250,7 +251,10 @@ class AbinitioEnsembler(_ensembler.Ensembler):
         }
 
         # strip out any that are None
-        kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
+        if sys.version_info.major == 3:
+            kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        else:
+            kwargs = {k: v for k, v in kwargs.iteritems() if v is not None}
 
         ensembles = self.generate_ensembles(models, **kwargs)
 

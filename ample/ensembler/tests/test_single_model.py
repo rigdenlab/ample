@@ -8,7 +8,7 @@ class Test(unittest.TestCase):
     def test_generateResidueScorelist(self):
         scores = [
             {'residue': (i), 'concoord': (i * 0.5 * 3.452), 'rosetta': (i * 3.452), 'unknown': (i * 1.11 * 3.452)}
-            for i in xrange(1, 11)
+            for i in range(1, 11)
         ]
         zipped_concoord = single_model.SingleModelEnsembler._generate_residue_scorelist('residue', 'concoord', scores)
         ref_concoord = [

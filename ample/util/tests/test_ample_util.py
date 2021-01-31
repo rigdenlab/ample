@@ -2,6 +2,7 @@
 
 import pickle
 import os
+import sys
 import unittest
 from ample.util import ample_util
 from ample.constants import AMPLE_PKL, SHARE_DIR
@@ -22,8 +23,11 @@ class Test(unittest.TestCase):
         self.assertEqual("theseus" + ample_util.EXE_EXT, theseus_exe)
 
     def test_resultsd_fix_path(self):
-        with open(os.path.join(SHARE_DIR, 'testfiles', AMPLE_PKL)) as f:
-            optd = pickle.load(f)
+        with open(os.path.join(SHARE_DIR, 'testfiles', AMPLE_PKL), 'rb') as f:
+            if sys.version_info.major == 3:
+                optd = pickle.load(f, encoding='latin1')
+            else:
+                optd = pickle.load(f)
         d = ample_util.amoptd_fix_path(optd, newroot='/foo/bar')
         self.assertEqual(d['fasta'], '/foo/bar/ampl_.fasta')
         self.assertEqual(

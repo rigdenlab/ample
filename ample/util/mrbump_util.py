@@ -59,8 +59,11 @@ class ResultsSummary(object):
         self.pdir = None
         self.success = False
         if results_pkl and os.path.isfile(results_pkl):
-            with open(results_pkl) as f:
-                resd = pickle.load(f)
+            with open(results_pkl, 'rb') as f:
+                if sys.version_info.major == 3:
+                    resd = pickle.load(f, encoding='latin1')
+                else:
+                    resd = pickle.load(f)
             mkey = 'mrbump_results'
             if mkey in resd and len(resd[mkey]):
                 self.results = resd[mkey]
@@ -304,42 +307,73 @@ class ResultsSummary(object):
     def processMrbumpPkl(self, resultsPkl):
         """Process dictionary
         """
-        with open(resultsPkl) as f:
+        with open(resultsPkl, 'rb') as f:
             rD = pickle.load(f)
         if not rD:
             return []
         results = []
-        for name, d1 in rD.iteritems():
-            for mrprog, d2 in d1.iteritems():
-                # Check if all the entries are None - means job didn't run.
-                # Should probably think of a better way to spot that (Search_directory is always set)
-                if not any([v for k, v in d2.iteritems() if k != 'Search_directory']):
-                    continue
-                # Add MR program as dictionary entry
-                d = copy.copy(d2)
-                del d['SearchModel_filename']
-                d['name'] = name
-                # name is e.g.: loc0_ALL_c1_tl100_r2_allatom_UNMOD
-                d['ensemble_name'] = name[9:-6]
-                d['MR_program'] = mrprog
-                # Hack for old versions
-                if 'JobDirectory' in d:
-                    d['MR_directory'] = d['JobDirectory']
-                    del d['JobDirectory']
-                    d['Search_directory'] = os.sep.join(d['MR_directory'].split(os.sep)[:-5])
-                if 'final_Rfree' in d:
-                    d['REFMAC_Rfree'] = d['final_Rfree']
-                    d['REFMAC_Rfact'] = d['final_Rfact']
-                    del d['final_Rfree']
-                    del d['final_Rfact']
-                results.append(d)
+        if sys.version_info.major == 3:
+            for name, d1 in rD.items():
+                for mrprog, d2 in d1.items():
+                    # Check if all the entries are None - means job didn't run.
+                    # Should probably think of a better way to spot that (Search_directory is always set)
+                    if not any([v for k, v in d2.items() if k != 'Search_directory']):
+                        continue
+                    # Add MR program as dictionary entry
+                    d = copy.copy(d2)
+                    del d['SearchModel_filename']
+                    d['name'] = name
+                    # name is e.g.: loc0_ALL_c1_tl100_r2_allatom_UNMOD
+                    d['ensemble_name'] = "{0}_{1}_{2}_{3}".format(*name[9:].split('_')[0:4])
+                    d['MR_program'] = mrprog
+                    # Hack for old versions
+                    if 'JobDirectory' in d:
+                        d['MR_directory'] = d['JobDirectory']
+                        del d['JobDirectory']
+                        d['Search_directory'] = os.sep.join(d['MR_directory'].split(os.sep)[:-5])
+                    if 'final_Rfree' in d:
+                        d['REFMAC_Rfree'] = d['final_Rfree']
+                        d['REFMAC_Rfact'] = d['final_Rfact']
+                        del d['final_Rfree']
+                        del d['final_Rfact']
+                    results.append(d)
+        else:
+            for name, d1 in rD.iteritems():
+                for mrprog, d2 in d1.iteritems():
+                    # Check if all the entries are None - means job didn't run.
+                    # Should probably think of a better way to spot that (Search_directory is always set)
+                    if not any([v for k, v in d2.iteritems() if k != 'Search_directory']):
+                        continue
+                    # Add MR program as dictionary entry
+                    d = copy.copy(d2)
+                    del d['SearchModel_filename']
+                    d['name'] = name
+                    # name is e.g.: loc0_ALL_c1_tl100_r2_allatom_UNMOD
+                    d['ensemble_name'] = "{0}_{1}_{2}_{3}".format(*name[9:].split('_')[0:4])
+                    d['MR_program'] = mrprog
+                    # Hack for old versions
+                    if 'JobDirectory' in d:
+                        d['MR_directory'] = d['JobDirectory']
+                        del d['JobDirectory']
+                        d['Search_directory'] = os.sep.join(d['MR_directory'].split(os.sep)[:-5])
+                    if 'final_Rfree' in d:
+                        d['REFMAC_Rfree'] = d['final_Rfree']
+                        d['REFMAC_Rfact'] = d['final_Rfact']
+                        del d['final_Rfree']
+                        del d['final_Rfact']
+                    results.append(d)
         return results
 
     def _processFailed(self, mrbump_dir, failed):
         """Generate dictionaries for failed results
         """
         results = []
-        for ensemble, reason in failed.iteritems():
+        if sys.version_info.major == 3:
+            failed_d = failed.items()
+        else:
+            failed_d = failed.iteritems()
+
+        for ensemble, reason in failed_d:
             d = self.createDict()
             # name hard-coded
             # d['name'] = "loc0_ALL_" + ensemble + "_UNMOD"
@@ -550,7 +584,6 @@ def checkSuccess(script_path):
 
 def finalSummary(amoptd):
     """Print a final summary of the job"""
-
     mrbump_data = amoptd['mrbump_results']
     if not mrbump_data:
         return "Could not find any MRBUMP results in directory: {0}!".format(amoptd['mrbump_dir'])
@@ -567,12 +600,12 @@ def finalSummary(amoptd):
                 if ed['name'] == d['ensemble_name']:
                     d.update(ed)
                     results.append(d)
-        keys = ['ensemble_name', 'Solution_Type', 'MR_program']
+        keys = ['ensemble_name', 'MR_program']
         keys += _resultsKeys(results)
         keys += ['subcluster_num_models', 'num_residues']
     else:
         results = mrbump_data
-        keys = ['name', 'Solution_Type', 'MR_program']
+        keys = ['name', 'MR_program']
         keys += _resultsKeys(results)
 
     resultsTable = []
@@ -707,7 +740,8 @@ def write_jobscript(name, keyword_file, amoptd, directory=None, job_time=86400, 
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig()
+    logging.getLogger().setLevel(logging.INFO)
 
     if len(sys.argv) >= 2:
         mrbump_dir = os.path.join(os.getcwd(), sys.argv[1])

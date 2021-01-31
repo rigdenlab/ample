@@ -318,6 +318,7 @@ where inp_list.dat  contains:
         cmd = [self.executable, '--make-archive', garchive, '-pdb', mdir]
         # cmd += [ '-nthreads=auto' ]
         cmd += ['-nthreads={0}'.format(self.nproc)]
+        print(" ".join(cmd))
         # HACK FOR DYLD!!!!
         env = None
         # env = {'DYLD_LIBRARY_PATH' : '/opt/ccp4-devtools/install/lib'}
