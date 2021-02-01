@@ -1,6 +1,19 @@
 Changelog
 =========
 
+1.5.5
+------
+
+Added
+~~~~~
+- New single model mode that uses score in the B-factor column to truncate model
+
+Changed
+~~~~~~~
+- Additional changes for Py3 compatibility
+- Fixed tests
+- Fixed docs
+
 1.5.0
 ------
 
