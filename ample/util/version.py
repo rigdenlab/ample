@@ -1,3 +1,3 @@
-__version_info__ = (1, 5, 4)
+__version_info__ = (1, 5, 5)
 __version__ = '.'.join(str(v) for v in __version_info__)
-__git_revno__ = "3d9439017d9b1abba6289f16772c84fbf2dc4b82"
+__git_revno__ = "3b9cd7076b27f40eda31c1194e50801878237e90"
