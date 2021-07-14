@@ -9,6 +9,7 @@ import logging
 import math
 import os
 import pandas as pd
+import string
 import sys
 
 from ample.ensembler import _ensembler, truncation_util
@@ -65,7 +66,24 @@ class SingleModelEnsembler(_ensembler.Ensembler):
         os.mkdir(std_models_dir)
 
         std_model = ample_util.filename_append(models[0], 'std', std_models_dir)
-        pdb_edit.standardise(pdbin=models[0], pdbout=std_model)
+
+        #Clean up potential oddities in input files i.e. missing chain ID, odd PDB headers
+        struct = gemmi.read_structure(models[0])
+        model = struct[0]
+        alphabet = list(string.ascii_lowercase)
+        for i, chain in enumerate(model):
+            if chain.name == "":
+                chain.name = alphabet[i]
+        for chain in model:
+            for idx, residue in enumerate(chain):
+                residue.seqid.num = idx + 1
+        pdb_string = [line for line in struct.make_minimal_pdb().split('\n')]
+        with open("tmp.pdb", "w") as f_out:
+            for line in pdb_string:
+                f_out.write(line + os.linesep)
+
+        pdb_edit.standardise(pdbin="tmp.pdb", pdbout=std_model)
+        os.unlink("tmp.pdb")
 
         if truncation_method == truncation_util.TRUNCATION_METHODS.ERRORS:
             self._modify_bfactors(std_model, std_model)

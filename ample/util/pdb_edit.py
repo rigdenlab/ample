@@ -7,13 +7,11 @@ import copy
 import logging
 import os
 import re
-import string
 import sys
 import unittest
 
 import iotbx.file_reader
 import iotbx.pdb
-import gemmi
 
 from ample.util import ample_util, pdb_model, residue_map, sequence_util
 
@@ -1095,22 +1093,6 @@ def split_into_chains(pdbin, chain=None, directory=None):
 def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
-
-    #Clean up potential oddities in input files i.e. missing chain ID, odd PDB headers
-    struct = gemmi.read_structure(pdbin)
-    model = struct[0]
-    alphabet = list(string.ascii_lowercase)
-    for i, chain in enumerate(model):
-        if chain.name == "":
-            chain.name = alphabet[i]
-    for chain in model:
-        for idx, residue in enumerate(chain):
-            residue.seqid.num = idx + 1
-    pdb_string = [line for line in struct.make_minimal_pdb().split('\n')]
-    with open(pdbin, "w") as f_out:
-        for line in pdb_string:
-            f_out.write(line + os.linesep)
-
     tmp1 = ample_util.tmp_file_name() + ".pdb"  # pdbcur insists names have a .pdb suffix
 
     # Now clean up with pdbcur
