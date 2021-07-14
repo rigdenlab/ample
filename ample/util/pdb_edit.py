@@ -1093,7 +1093,6 @@ def split_into_chains(pdbin, chain=None, directory=None):
 def standardise(pdbin, pdbout, chain=None, del_hetatm=False):
     """Rename any non-standard AA, remove solvent and only keep most probably conformation.
     """
-
     tmp1 = ample_util.tmp_file_name() + ".pdb"  # pdbcur insists names have a .pdb suffix
 
     # Now clean up with pdbcur
