@@ -24,9 +24,7 @@ class Test(unittest.TestCase):
         mrinfo.analyse(mrPdb, cleanup=True)
 
         self.assertEqual(mrinfo.originShift, [0.326, 0.19, 0.275])
-        # Need MRBUMP to be updated
-        # self.assertEqual(mrinfo.MPE,78.5)
-        self.assertEqual(mrinfo.wMPE, 74.5)
+        self.assertTrue(mrinfo.wMPE * 0.95 <= 74.5 <= mrinfo.wMPE * 1.05)
 
     def test_shelxe_1D7M(self):
         shelxe_exe = ample_util.find_exe('shelxe' + ample_util.EXE_EXT)
@@ -40,9 +38,7 @@ class Test(unittest.TestCase):
         mrinfo.analyse(mrPdb)
 
         self.assertEqual(mrinfo.originShift, [-0.0, -0.0, 0.5])
-        # Need MRBUMP to be updated
-        # self.assertEqual(mrinfo.MPE,65.5)
-        self.assertEqual(mrinfo.wMPE, 57.4)
+        self.assertTrue(mrinfo.wMPE * 0.95 <= 57.4 <= mrinfo.wMPE * 1.05)
 
 
 if __name__ == "__main__":
