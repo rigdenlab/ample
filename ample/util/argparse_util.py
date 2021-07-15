@@ -249,7 +249,7 @@ def add_general_options(parser=None):
     parser.add_argument(
         '-show_gui', action=BoolAction, nargs='?', metavar='True/False', help='Pop up and display a stand-alone GUI'
     )
-    parser.add_argument('-single_model', help='Single structure model to be used to create ensembles')
+    parser.add_argument('-single_model', action=FilePathAction, help='Single structure model to be used to create ensembles')
     parser.add_argument(
         '-sf_cif', action=FilePathAction, help='Path to a structure factor CIF file (instead of MTZ file)'
     )
