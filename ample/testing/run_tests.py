@@ -49,9 +49,9 @@ Available tests include:
     argd = vars(parser.parse_args())
 
     which_test = argd['which']
-    if which_test is 'integration':
+    if which_test == 'integration':
         run_integration(argd)
-    elif which_test is 'unittest':
+    elif which_test == 'unittest':
         run_unittest(argd)
 
 
